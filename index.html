@@ -250,6 +250,35 @@
             text-shadow: 0 0 20px currentColor;
         }
         
+        /* Character Selection CSS */
+        .char-preview-box {
+            width: 192px; /* 64 * 3 (Skala 3x) */
+            height: 192px;
+            border: 2px solid;
+            background-color: rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+            box-shadow: 0 0 20px inset;
+        }
+        .sprite-idle {
+            width: 64px;
+            height: 64px;
+            background: url('https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png') left center;
+            animation: play-sprite 1s steps(17) infinite;
+            transform: scale(3); /* Perbesar pixel art */
+            image-rendering: pixelated; /* Jaga agar tetap tajam/pixelated */
+        }
+        .p1-box { color: var(--neon-blue); border-color: var(--neon-blue); }
+        .p2-box { color: var(--neon-pink); border-color: var(--neon-pink); }
+        .p1-box .sprite-idle { filter: drop-shadow(0 0 5px var(--neon-blue)); }
+        .p2-box .sprite-idle { filter: drop-shadow(0 0 5px var(--neon-pink)) hue-rotate(90deg); /* Ubah warna untuk membedakan P2 */ }
+
+        @keyframes play-sprite {
+            100% { background-position: -1088px; } /* 64px * 17 frame = 1088px */
+        }
+
         /* Particle effect canvas */
         #particles {
             position: absolute;
@@ -297,7 +326,8 @@
         <!-- Start Screen -->
         <div id="start-screen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#050510]">
             <h1 class="title-text">RUMBLOK</h1>
-            <button id="btn-start-game" class="btn-neon btn-start">START BATTLE</button>
+            <!-- Ubah ID tombol ini -->
+            <button id="btn-to-select" class="btn-neon btn-start">START BATTLE</button>
             
             <div class="controls-info">
                 <div class="control-block text-right">
@@ -317,6 +347,38 @@
                     <p>POWER: <span class="key-badge">;</span> <span class="text-xs">(when Spirit full)</span></p>
                 </div>
             </div>
+        </div>
+
+        <!-- Character Selection Screen -->
+        <div id="char-select-screen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#050510] hidden">
+            <h2 class="text-4xl font-black text-white mb-10 tracking-widest" style="text-shadow: 0 0 10px white;">SELECT FIGHTER</h2>
+            
+            <div class="flex gap-20 mb-10">
+                <!-- Player 1 Select -->
+                <div class="flex flex-col items-center">
+                    <h3 class="text-neon-blue font-bold text-2xl mb-4">P1 BLOK</h3>
+                    <div class="char-preview-box p1-box">
+                        <div class="sprite-idle"></div>
+                    </div>
+                    <p class="text-gray-400">Ready</p>
+                </div>
+
+                <div class="flex flex-col items-center justify-center">
+                    <span class="text-6xl text-white font-black opacity-50">VS</span>
+                </div>
+
+                <!-- Player 2 Select -->
+                <div class="flex flex-col items-center">
+                    <h3 class="text-neon-pink font-bold text-2xl mb-4">P2 CYBR</h3>
+                    <div class="char-preview-box p2-box">
+                        <div class="sprite-idle" style="transform: scale(-3, 3);"></div> <!-- Dibalik secara horizontal -->
+                    </div>
+                    <p class="text-gray-400">Ready</p>
+                </div>
+            </div>
+
+            <!-- Tombol untuk mulai bertanding -->
+            <button id="btn-start-game" class="btn-neon btn-start text-2xl px-10 py-4">FIGHT!</button>
         </div>
 
         <!-- Game Over Screen -->
@@ -355,6 +417,7 @@
         // UI Elements
         const screens = {
             start: document.getElementById('start-screen'),
+            select: document.getElementById('char-select-screen'),
             game: document.getElementById('hud'),
             over: document.getElementById('game-over-screen')
         };
@@ -459,8 +522,8 @@
             constructor({position, velocity, color, name, isPlayer1}) {
                 this.position = position;
                 this.velocity = velocity;
-                this.width = 60;
-                this.height = 120;
+                this.width = 90;
+                this.height = 90;
                 this.color = color;
                 this.name = name;
                 this.isPlayer1 = isPlayer1;
@@ -470,13 +533,30 @@
                 this.spirit = 0;
                 this.isDead = false;
 
-                // States: idle, walk, punch, kick, power, hit
+                // States: idle, walk, jump, punch, kick, power, hit
                 this.state = 'idle';
                 this.stateTimer = 0;
                 
-                // Animation properties
-                this.scaleY = 1;
-                this.limbAngle = 0;
+                // Konfigurasi Kumpulan Sprite Sheet
+                this.sprites = {
+                    idle: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png', frames: 17 },
+                    walk: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/walk.png', frames: 7 },
+                    jump: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/jumpy.png', frames: 6 },
+                    punch: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/punch.png', frames: 13 },
+                    kick: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/kick.png', frames: 17 },
+                    laser: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/laser.png', frames: 5 }
+                };
+
+                // Preload semua gambar
+                for (const key in this.sprites) {
+                    this.sprites[key].img = new Image();
+                    this.sprites[key].img.src = this.sprites[key].src;
+                }
+
+                this.currentSprite = this.sprites.idle;
+                this.currentFrame = 0;
+                this.framesElapsed = 0;
+                this.framesHold = 4; // Kecepatan dasar animasi
 
                 // Hitboxes
                 this.attackBox = {
@@ -487,12 +567,28 @@
                     spiritGain: 0,
                     active: false
                 };
+            }
 
-                this.projectiles = []; // For power move
+            // Fungsi untuk berpindah animasi dengan mulus
+            switchState(newState) {
+                if (this.state === newState) return;
+                this.state = newState;
+                this.currentFrame = 0;
+                this.framesElapsed = 0;
+
+                switch (newState) {
+                    case 'idle': this.currentSprite = this.sprites.idle; this.framesHold = 4; break;
+                    case 'walk': this.currentSprite = this.sprites.walk; this.framesHold = 4; break;
+                    case 'jump': this.currentSprite = this.sprites.jump; this.framesHold = 6; break;
+                    case 'punch': this.currentSprite = this.sprites.punch; this.framesHold = 2; break; // Lebih cepat
+                    case 'kick': this.currentSprite = this.sprites.kick; this.framesHold = 2; break; 
+                    case 'hit': this.currentSprite = this.sprites.idle; this.framesHold = 4; break; 
+                    case 'power': this.currentSprite = this.sprites.idle; this.framesHold = 2; break; 
+                }
             }
 
             draw() {
-                // Update facing direction based on other player (simplified targeting)
+                // Update facing direction (auto-aim)
                 if (this.state !== 'dead') {
                      let opponent = this.isPlayer1 ? player2 : player1;
                      if (opponent) {
@@ -501,163 +597,96 @@
                 }
 
                 ctx.save();
-                ctx.translate(this.position.x + this.width / 2, this.position.y + this.height);
+                ctx.translate(this.position.x + this.width / 2, this.position.y + this.height / 2);
                 ctx.scale(this.facingRight ? 1 : -1, 1);
                 
-                // Neon Glow
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = this.color;
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = 3;
-                ctx.fillStyle = 'rgba(0,0,0,0.8)';
-
-                // Draw based on state (Geometric/Robot Style)
-                const torsoW = 40;
-                const torsoH = 60;
-                
-                // Animation offsets
-                let headY = -this.height + 10;
-                let armRotate = 0;
-                let legRotate = 0;
-                let bodyTilt = 0;
-
-                if (this.state === 'walk') {
-                    legRotate = Math.sin(Date.now() / 100) * 0.5;
-                    armRotate = -legRotate;
-                    headY += Math.abs(Math.sin(Date.now() / 100)) * 5;
-                } else if (this.state === 'punch') {
-                    armRotate = Math.PI / 2; // Extend arm
-                    bodyTilt = 0.2;
-                } else if (this.state === 'kick') {
-                    legRotate = -Math.PI / 2; // Extend leg forward
-                    bodyTilt = -0.2;
-                } else if (this.state === 'power') {
-                    armRotate = Math.PI / 4 + Math.sin(Date.now() / 50) * 0.2;
-                    ctx.shadowBlur = 30; // Extra glow during power
-                } else if (this.state === 'hit') {
-                    bodyTilt = -0.3; // Lean back
-                    headY += 10;
-                }
-
-                ctx.rotate(bodyTilt);
-
-                // --- Legs ---
-                // Back Leg
-                ctx.beginPath();
-                ctx.moveTo(-10, -torsoH);
-                let bLegX = -10 + Math.sin(-legRotate) * 20;
-                let bLegY = -torsoH + 50;
-                if(this.state==='kick') { bLegX = -10; bLegY = -10; } // stand on back leg
-                ctx.lineTo(bLegX, bLegY);
-                ctx.stroke();
-
-                // Front Leg (Kick leg)
-                ctx.beginPath();
-                ctx.moveTo(10, -torsoH);
-                let fLegX = 10 + Math.sin(legRotate) * 40;
-                let fLegY = -torsoH + 50;
-                if(this.state === 'kick') {
-                    fLegX = 60; fLegY = -torsoH + 20; // kick outward
-                }
-                ctx.lineTo(fLegX, fLegY);
-                ctx.stroke();
-
-                // --- Torso (Hexagon) ---
-                ctx.beginPath();
-                ctx.moveTo(0, -this.height + 30);
-                ctx.lineTo(torsoW/2, -torsoH - 10);
-                ctx.lineTo(torsoW/2, -torsoH + 30);
-                ctx.lineTo(0, -10);
-                ctx.lineTo(-torsoW/2, -torsoH + 30);
-                ctx.lineTo(-torsoW/2, -torsoH - 10);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                // --- Arms ---
-                // Back Arm
-                ctx.beginPath();
-                ctx.moveTo(-15, -this.height + 40);
-                ctx.lineTo(-20 + Math.sin(-armRotate)*20, -this.height + 70);
-                ctx.stroke();
-
-                // Front Arm (Punch arm)
-                ctx.beginPath();
-                ctx.moveTo(15, -this.height + 40);
-                let fArmX = 15 + Math.sin(armRotate)*40;
-                let fArmY = -this.height + 70 - Math.abs(Math.cos(armRotate)*20);
-                
-                if (this.state === 'punch') {
-                    fArmX = 60; fArmY = -this.height + 40;
-                } else if (this.state === 'power') {
-                    fArmX = 40; fArmY = -this.height + 20;
-                }
-                ctx.lineTo(fArmX, fArmY);
-                ctx.stroke();
-
-                // --- Head (Diamond) ---
-                ctx.beginPath();
-                ctx.moveTo(0, headY - 15);
-                ctx.lineTo(15, headY);
-                ctx.lineTo(0, headY + 15);
-                ctx.lineTo(-15, headY);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                // Eye/Visor
-                ctx.fillStyle = this.color;
-                ctx.shadowBlur = 10;
-                ctx.beginPath();
-                ctx.arc(5, headY, 3, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Draw Attack Box (Debug/Visual indicator)
-                if (this.attackBox.active) {
-                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                    // Revert scale to draw box accurately in world space relative to center
-                    ctx.scale(this.facingRight ? 1 : -1, 1); 
-                    let boxX = this.facingRight ? (this.attackBox.position.x - this.position.x - this.width/2) : -(this.attackBox.position.x + this.attackBox.width - this.position.x - this.width/2);
-                    let boxY = this.attackBox.position.y - this.position.y - this.height;
-                    
-                    // Actually, let's skip drawing debug boxes for cleaner look, 
-                    // but we keep the logic. Let's add a slash effect instead.
-                    if (this.state === 'punch' || this.state === 'kick') {
-                        ctx.strokeStyle = 'white';
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.moveTo(boxX, boxY + this.attackBox.height/2);
-                        ctx.lineTo(boxX + (this.facingRight?this.attackBox.width:-this.attackBox.width), boxY + this.attackBox.height/2);
-                        ctx.stroke();
+                // Update frame animasi
+                if (this.state !== 'dead') {
+                    this.framesElapsed++;
+                    if (this.framesElapsed % this.framesHold === 0) {
+                        // Untuk serangan, tahan di frame terakhir (tidak mengulang/loop dari awal saat memukul)
+                        if (['punch', 'kick'].includes(this.state)) {
+                            if (this.currentFrame < this.currentSprite.frames - 1) {
+                                this.currentFrame++;
+                            }
+                        } else {
+                            this.currentFrame = (this.currentFrame + 1) % this.currentSprite.frames;
+                        }
                     }
                 }
 
-                ctx.restore();
+                ctx.imageSmoothingEnabled = false; 
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = this.color;
 
-                // Draw Projectiles (Power move)
-                this.projectiles.forEach(p => {
-                    ctx.save();
+                let drawX = -this.width / 2;
+                let drawY = -this.height / 2;
+                
+                // Efek visual khusus saat terkena pukulan atau mengeluarkan jurus
+                if (this.state === 'hit') {
+                    ctx.translate(-10, 0); 
+                    ctx.rotate(-0.2);
+                } else if (this.state === 'power') {
+                    ctx.shadowBlur = 40; 
+                    this.currentFrame = Math.floor(Math.random() * this.currentSprite.frames); 
+                }
+
+                // Pewarnaan Player 2 & Efek Hit
+                let currentFilter = 'none';
+                if (!this.isPlayer1) currentFilter = 'hue-rotate(90deg)'; 
+                if (this.state === 'hit') {
+                    currentFilter = currentFilter !== 'none' ? currentFilter + ' brightness(200%)' : 'brightness(200%)';
+                }
+                ctx.filter = currentFilter;
+
+                // Render Sprite aktif
+                ctx.drawImage(
+                    this.currentSprite.img,
+                    this.currentFrame * 64, 
+                    0,                      
+                    64,                     
+                    64,                     
+                    drawX,                  
+                    drawY,                  
+                    this.width,             
+                    this.height             
+                );
+
+                ctx.filter = 'none';
+
+                // Render Power Laser (Semburan Energi Statis)
+                if (this.state === 'power' && this.attackBox.active) {
+                    // Diperlambat dengan membagi frameElapsed dengan 8 (sebelumnya 4)
+                    let laserFrame = Math.floor(this.framesElapsed / 8) % this.sprites.laser.frames;
+                    
                     ctx.shadowBlur = 20;
                     ctx.shadowColor = this.color;
-                    ctx.fillStyle = this.color;
+                    if (!this.isPlayer1) ctx.filter = 'hue-rotate(90deg)';
                     
-                    // Beam shape
-                    ctx.beginPath();
-                    ctx.ellipse(p.x, p.y, p.width/2, p.height/2, 0, 0, Math.PI*2);
-                    ctx.fill();
+                    // Hitung skala agar ukuran laser proporsional dengan pembesaran karakter
+                    let scale = this.height / 64; 
+                    let scaledWidth = 164 * scale;
+                    let scaledHeight = 64 * scale;
                     
-                    // Core white
-                    ctx.fillStyle = 'white';
-                    ctx.shadowBlur = 0;
-                    ctx.beginPath();
-                    ctx.ellipse(p.x, p.y, p.width/4, p.height/4, 0, 0, Math.PI*2);
-                    ctx.fill();
-                    ctx.restore();
-                });
+                    // Offset X untuk memundurkan posisi laser agar lebih pas
+                    let xOffset = 20; // Sesuaikan nilai ini jika masih kurang pas
+
+                    ctx.drawImage(
+                        this.sprites.laser.img,
+                        laserFrame * 164, 0, 164, 64,
+                        this.width / 2 - xOffset, // Posisi X dimundurkan sedikit dengan xOffset
+                        -scaledHeight / 2, // Posisi Y di-tengah (center)
+                        scaledWidth, 
+                        scaledHeight
+                    );
+                    
+                    ctx.filter = 'none';
+                }
+
+                ctx.restore();
             }
 
             update(deltaTime) {
-                // Apply Gravity
                 this.position.y += this.velocity.y;
                 this.velocity.y += GRAVITY;
 
@@ -674,96 +703,94 @@
 
                 this.position.x += this.velocity.x;
 
-                // State Management
+                // Hitungan waktu transisi state serangan/hit ke netral
                 if (this.stateTimer > 0) {
                     this.stateTimer -= deltaTime;
                     if (this.stateTimer <= 0) {
-                        this.state = 'idle';
                         this.attackBox.active = false;
+                        if (['punch', 'kick', 'power', 'hit'].includes(this.state)) {
+                            this.switchState('idle'); // Kembalikan ke netral, akan di-override animate() kalau sedang jalan/lompat
+                        }
                     }
-                } else if (this.state === 'hit') {
-                    this.state = 'idle';
                 }
 
-                // Update attack box position based on facing direction
+                // Posisi attack box relatif terhadap tubuh
                 if (this.attackBox.active) {
                     if (this.facingRight) {
                         this.attackBox.position.x = this.position.x + this.width;
                     } else {
                         this.attackBox.position.x = this.position.x - this.attackBox.width;
                     }
-                    this.attackBox.position.y = this.position.y + this.height / 4;
-                }
-
-                // Update Projectiles
-                for (let i = this.projectiles.length - 1; i >= 0; i--) {
-                    let p = this.projectiles[i];
-                    p.x += p.vx;
                     
-                    // Remove if off screen
-                    if (p.x < 0 || p.x > canvas.width) {
-                        this.projectiles.splice(i, 1);
+                    // Sesuaikan posisi Y hitbox khusus untuk jurus Power agar di tengah karakter
+                    if (this.state === 'power') {
+                        this.attackBox.position.y = this.position.y + (this.height - this.attackBox.height) / 2;
+                    } else {
+                        this.attackBox.position.y = this.position.y + this.height / 4;
                     }
                 }
             }
 
             punch() {
-                if (this.state !== 'idle' && this.state !== 'walk') return;
-                this.state = 'punch';
-                this.stateTimer = 300; // ms
+                if (['punch', 'kick', 'power', 'hit'].includes(this.state)) return;
+                
+                this.switchState('punch');
+                this.stateTimer = 400; // ms (waktu yg cukup untuk 13 frames)
                 this.attackBox.width = 60;
                 this.attackBox.height = 40;
                 this.attackBox.damage = 5;
                 this.attackBox.spiritGain = 10;
                 
-                // Delay attack activation slightly for animation
-                setTimeout(() => { if(this.state === 'punch') this.attackBox.active = true; }, 100);
-                setTimeout(() => { this.attackBox.active = false; }, 200);
+                setTimeout(() => { if(this.state === 'punch') this.attackBox.active = true; }, 150);
+                setTimeout(() => { this.attackBox.active = false; }, 250);
             }
 
             kick() {
-                if (this.state !== 'idle' && this.state !== 'walk') return;
-                this.state = 'kick';
-                this.stateTimer = 400; // ms
+                if (['punch', 'kick', 'power', 'hit'].includes(this.state)) return;
+                
+                this.switchState('kick');
+                this.stateTimer = 500; // ms (waktu yg cukup untuk 17 frames)
                 this.attackBox.width = 80;
                 this.attackBox.height = 30;
                 this.attackBox.damage = 8;
                 this.attackBox.spiritGain = 15;
 
-                setTimeout(() => { if(this.state === 'kick') this.attackBox.active = true; }, 150);
-                setTimeout(() => { this.attackBox.active = false; }, 300);
+                setTimeout(() => { if(this.state === 'kick') this.attackBox.active = true; }, 200);
+                setTimeout(() => { this.attackBox.active = false; }, 350);
             }
 
             powerMove() {
-                if (this.spirit < MAX_SPIRIT) return;
-                if (this.state !== 'idle' && this.state !== 'walk') return;
+                // if (this.spirit < MAX_SPIRIT) return; // Syarat diabaikan untuk uji coba
+                if (['punch', 'kick', 'power', 'hit'].includes(this.state)) return;
                 
-                this.spirit = 0;
-                this.updateSpiritBar();
-                this.state = 'power';
-                this.stateTimer = 600; // ms freeze frame
+                // this.spirit = 0; // Pengosongan spirit dinonaktifkan untuk uji coba
+                // this.updateSpiritBar();
                 
-                // Screen shake effect
+                this.switchState('power');
+                this.stateTimer = 1000; // Perpanjang durasi state power menjadi 1 detik (1000ms)
+                
                 canvas.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
                 setTimeout(() => canvas.style.transform = 'translate(0,0)', 100);
 
+                // Laser akan muncul lebih cepat (150ms setelah tombol ditekan)
                 setTimeout(() => {
                     if(this.state === 'power') {
+                        // Sesuaikan hitbox attackBox agar menyamai ukuran visual laser yang membesar
+                        let scale = this.height / 64;
+                        this.attackBox.width = 164 * scale; 
+                        this.attackBox.height = 64 * scale;
+                        this.attackBox.damage = 25;
+                        this.attackBox.spiritGain = 0;
+                        this.attackBox.active = true;
+
                         let dir = this.facingRight ? 1 : -1;
                         let startX = this.facingRight ? this.position.x + this.width : this.position.x;
-                        
-                        this.projectiles.push({
-                            x: startX,
-                            y: this.position.y + this.height/2,
-                            vx: 15 * dir,
-                            width: 100,
-                            height: 40,
-                            damage: 25,
-                            active: true
-                        });
                         particles.spawnPower(startX, this.position.y + this.height/2, this.color, dir);
                     }
-                }, 300);
+                }, 150); 
+
+                // Laser dan hitbox baru menghilang setelah 800ms
+                setTimeout(() => { this.attackBox.active = false; }, 950);
             }
 
             takeHit(damage) {
@@ -771,13 +798,12 @@
                 if (this.health <= 0) {
                     this.health = 0;
                     this.isDead = true;
-                    this.state = 'hit'; // Or 'dead' state
+                    this.switchState('hit'); 
                 } else {
-                    this.state = 'hit';
-                    this.stateTimer = 200; // Stun duration
+                    this.switchState('hit');
+                    this.stateTimer = 200; 
                 }
                 
-                // Knockback
                 this.velocity.x = this.facingRight ? -3 : 3;
                 setTimeout(() => this.velocity.x = 0, 100);
 
@@ -838,7 +864,7 @@
             // Reset UI bars
             [player1, player2].forEach(p => {
                 p.health = MAX_HEALTH;
-                p.spirit = 0;
+                p.spirit = MAX_SPIRIT; // Spirit disetel langsung PENUH untuk uji coba
                 p.updateHealthBar();
                 p.updateSpiritBar();
             });
@@ -852,15 +878,6 @@
                 rectangle1.position.x <= rectangle2.position.x + rectangle2.width &&
                 rectangle1.position.y + rectangle1.height >= rectangle2.position.y &&
                 rectangle1.position.y <= rectangle2.position.y + rectangle2.height
-            );
-        }
-
-        function projectileCollision({ proj, player }) {
-            return (
-                proj.x + proj.width/2 >= player.position.x &&
-                proj.x - proj.width/2 <= player.position.x + player.width &&
-                proj.y + proj.height/2 >= player.position.y &&
-                proj.y - proj.height/2 <= player.position.y + player.height
             );
         }
 
@@ -893,52 +910,89 @@
                 ctx.stroke();
             }
 
-            // --- Player 1 Input ---
+            // --- Player 1 Logic ---
             player1.velocity.x = 0;
-            if (player1.state !== 'hit' && player1.state !== 'power' && !player1.isDead) {
+            const floorP1 = canvas.height - FLOOR_OFFSET - player1.height;
+            
+            if (!['hit', 'power'].includes(player1.state) && !player1.isDead) {
+                let isMovingP1 = false;
+                
+                // Horizontal Movement
                 if (keys.a.pressed && player1.position.x > 0) {
                     player1.velocity.x = -5;
-                    if (player1.state === 'idle') player1.state = 'walk';
+                    isMovingP1 = true;
                 } else if (keys.d.pressed && player1.position.x < canvas.width - player1.width) {
                     player1.velocity.x = 5;
-                    if (player1.state === 'idle') player1.state = 'walk';
-                } else {
-                    if (player1.state === 'walk') player1.state = 'idle';
+                    isMovingP1 = true;
                 }
 
-                // Jump
-                if (keys.w.pressed && player1.position.y >= floorY - player1.height) {
+                // Berhenti bergerak horizontal jika sedang menyerang di darat
+                if (['punch', 'kick'].includes(player1.state) && player1.position.y >= floorP1) {
+                    player1.velocity.x = 0; 
+                }
+
+                // Jump (Hanya bisa saat di tanah dan tidak sedang menyerang)
+                if (keys.w.pressed && player1.position.y >= floorP1 && !['punch', 'kick'].includes(player1.state)) {
                     player1.velocity.y = -15;
                 }
 
                 // Attacks
-                if (keys.f.pressed) player1.punch();
-                if (keys.g.pressed) player1.kick();
-                if (keys.h.pressed) player1.powerMove();
-            }
-
-            // --- Player 2 Input ---
-            player2.velocity.x = 0;
-            if (player2.state !== 'hit' && player2.state !== 'power' && !player2.isDead) {
-                if (keys.ArrowLeft.pressed && player2.position.x > 0) {
-                    player2.velocity.x = -5;
-                    if (player2.state === 'idle') player2.state = 'walk';
-                } else if (keys.ArrowRight.pressed && player2.position.x < canvas.width - player2.width) {
-                    player2.velocity.x = 5;
-                    if (player2.state === 'idle') player2.state = 'walk';
-                } else {
-                    if (player2.state === 'walk') player2.state = 'idle';
+                if (!['punch', 'kick'].includes(player1.state)) {
+                    if (keys.f.pressed) player1.punch();
+                    else if (keys.g.pressed) player1.kick();
+                    else if (keys.h.pressed) player1.powerMove();
                 }
 
-                // Jump
-                if (keys.ArrowUp.pressed && player2.position.y >= floorY - player2.height) {
+                // Penentuan Animasi Dasar (Berdasarkan posisi dan kecepatan)
+                if (!['punch', 'kick', 'power', 'hit'].includes(player1.state)) {
+                    if (player1.position.y < floorP1) {
+                        player1.switchState('jump');
+                    } else if (isMovingP1) {
+                        player1.switchState('walk');
+                    } else {
+                        player1.switchState('idle');
+                    }
+                }
+            }
+
+            // --- Player 2 Logic ---
+            player2.velocity.x = 0;
+            const floorP2 = canvas.height - FLOOR_OFFSET - player2.height;
+            
+            if (!['hit', 'power'].includes(player2.state) && !player2.isDead) {
+                let isMovingP2 = false;
+                
+                if (keys.ArrowLeft.pressed && player2.position.x > 0) {
+                    player2.velocity.x = -5;
+                    isMovingP2 = true;
+                } else if (keys.ArrowRight.pressed && player2.position.x < canvas.width - player2.width) {
+                    player2.velocity.x = 5;
+                    isMovingP2 = true;
+                }
+
+                if (['punch', 'kick'].includes(player2.state) && player2.position.y >= floorP2) {
+                    player2.velocity.x = 0;
+                }
+
+                if (keys.ArrowUp.pressed && player2.position.y >= floorP2 && !['punch', 'kick'].includes(player2.state)) {
                     player2.velocity.y = -15;
                 }
 
-                // Attacks
-                if (keys.k.pressed) player2.punch();
-                if (keys.l.pressed) player2.kick();
-                if (keys[';'].pressed) player2.powerMove();
+                if (!['punch', 'kick'].includes(player2.state)) {
+                    if (keys.k.pressed) player2.punch();
+                    else if (keys.l.pressed) player2.kick();
+                    else if (keys[';'].pressed) player2.powerMove();
+                }
+
+                if (!['punch', 'kick', 'power', 'hit'].includes(player2.state)) {
+                    if (player2.position.y < floorP2) {
+                        player2.switchState('jump');
+                    } else if (isMovingP2) {
+                        player2.switchState('walk');
+                    } else {
+                        player2.switchState('idle');
+                    }
+                }
             }
 
             // Update & Draw
@@ -970,25 +1024,6 @@
                 player1.takeHit(player2.attackBox.damage);
                 player2.addSpirit(player2.attackBox.spiritGain);
             }
-
-            // Projectile hits
-            player1.projectiles.forEach((proj, index) => {
-                if (proj.active && projectileCollision({proj: proj, player: player2})) {
-                    player2.takeHit(proj.damage);
-                    proj.active = false;
-                    player1.projectiles.splice(index, 1); // remove projectile
-                    particles.spawnHit(proj.x, proj.y, player1.color, 30); // big explosion
-                }
-            });
-
-            player2.projectiles.forEach((proj, index) => {
-                if (proj.active && projectileCollision({proj: proj, player: player1})) {
-                    player1.takeHit(proj.damage);
-                    proj.active = false;
-                    player2.projectiles.splice(index, 1);
-                    particles.spawnHit(proj.x, proj.y, player2.color, 30);
-                }
-            });
 
             // End game check based on health
             if (player1.health <= 0 || player2.health <= 0) {
@@ -1025,8 +1060,15 @@
             }
         }
 
-        function startGame() {
+        // Fungsi baru untuk ke layar pemilihan karakter
+        function goToCharSelect() {
             screens.start.classList.add('hidden');
+            screens.over.classList.add('hidden');
+            screens.select.classList.remove('hidden');
+        }
+
+        function startGame() {
+            screens.select.classList.add('hidden');
             screens.over.classList.add('hidden');
             screens.game.classList.remove('hidden');
             
@@ -1040,9 +1082,10 @@
             animate(lastTime);
         }
 
-        // Event Listeners for UI
+        // Event Listeners for UI - Diubah alurnya
+        document.getElementById('btn-to-select').addEventListener('click', goToCharSelect);
         document.getElementById('btn-start-game').addEventListener('click', startGame);
-        document.getElementById('btn-restart').addEventListener('click', startGame);
+        document.getElementById('btn-restart').addEventListener('click', goToCharSelect);
 
     </script>
 </body>

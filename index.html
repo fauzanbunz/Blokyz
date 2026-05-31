@@ -6,9 +6,15 @@
     <title>RUMBLOK - Futuristic Fighting</title>
     <!-- Tailwind CSS for layout and basic styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts for futuristic look -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Google Fonts for pixel look -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
+        /* Mengambil Font Custom NEMESYS dari Github */
+        @font-face {
+            font-family: 'Nemesys';
+            src: url('https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/NEMESYS-Regular.ttf') format('truetype');
+        }
+
         :root {
             --neon-blue: #00f3ff;
             --neon-pink: #ff00ff;
@@ -16,19 +22,16 @@
         }
 
         body {
-            font-family: 'Orbitron', sans-serif;
-            background-color: var(--dark-bg);
+            font-family: 'Press Start 2P', monospace;
+            background-color: #020205; /* Lebih gelap untuk efek TV */
             color: white;
-            overflow: hidden; /* Prevent scrolling */
+            overflow: hidden;
             margin: 0;
             padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-image: 
-                radial-gradient(circle at 15% 50%, rgba(0, 243, 255, 0.1), transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(255, 0, 255, 0.1), transparent 25%);
         }
 
         #game-container {
@@ -37,27 +40,67 @@
             max-width: 1200px;
             height: 100vh;
             max-height: 800px;
-            background: linear-gradient(180deg, #0a0a1a 0%, #050510 100%);
+            background: #050510;
             border: 2px solid rgba(0, 243, 255, 0.2);
             box-shadow: 0 0 30px rgba(0, 243, 255, 0.1) inset;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            animation: container-glitch 4s infinite;
         }
 
-        /* Scanline effect for retro-futuristic feel */
+        /* --- EFEK TV RUSAK & GLITCH BACKGROUND --- */
+        
+        /* 1. Static Scanlines Statis */
         #game-container::after {
             content: " ";
             display: block;
             position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
             z-index: 10;
             background-size: 100% 4px, 6px 100%;
             pointer-events: none;
+        }
+
+        /* 2. Garis Tebal yang Berjalan ke Bawah (Rolling V-Sync Loss) */
+        .scanline-roll {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 15%;
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0),
+                rgba(0, 255, 255, 0.05) 50%,
+                rgba(0, 0, 0, 0)
+            );
+            opacity: 0.5;
+            animation: roll 5s infinite linear;
+            pointer-events: none;
+            z-index: 11;
+        }
+
+        @keyframes roll {
+            0% { top: -20%; }
+            100% { top: 120%; }
+        }
+
+        /* 3. Matrix Background Canvas */
+        #matrixCanvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1; /* Di bawah game canvas */
+            pointer-events: none;
+            opacity: 0.6; /* Transparansi agar tidak terlalu menyilaukan */
+        }
+
+        /* 4. Layar Bergetar Acak (Glitch Keseluruhan Layar) */
+        @keyframes container-glitch {
+            0% { transform: translate(0, 0) scale(1); filter: hue-rotate(0deg); }
+            2% { transform: translate(2px, -2px) scale(1.01); filter: hue-rotate(15deg); }
+            4% { transform: translate(-2px, 2px) scale(1); filter: hue-rotate(-15deg); }
+            6% { transform: translate(0, 0) scale(1); filter: hue-rotate(0deg); }
+            100% { transform: translate(0, 0) scale(1); filter: hue-rotate(0deg); }
         }
 
         canvas {
@@ -65,241 +108,189 @@
             width: 100%;
             height: 100%;
             flex-grow: 1;
+            position: relative;
+            z-index: 5;
         }
 
         /* HUD Styling */
         #hud {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            z-index: 20;
-            pointer-events: none;
+            top: 0; left: 0; width: 100%; padding: 20px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            z-index: 20; pointer-events: none;
         }
 
-        .player-hud {
-            width: 40%;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
+        .player-hud { width: 40%; display: flex; flex-direction: column; gap: 10px; }
         .player1-hud { align-items: flex-start; }
         .player2-hud { align-items: flex-end; }
 
         .name-tag {
-            font-size: 1.5rem;
-            font-weight: 900;
-            text-transform: uppercase;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
             text-shadow: 0 0 10px currentColor;
         }
         .player1-name { color: var(--neon-blue); }
         .player2-name { color: var(--neon-pink); }
 
-        /* Health Bar */
         .bar-container {
-            width: 100%;
-            height: 30px;
-            background-color: rgba(255,255,255,0.1);
-            border: 2px solid currentColor;
-            position: relative;
-            transform: skewX(-15deg);
+            width: 100%; height: 30px; background-color: rgba(255,255,255,0.1);
+            border: 2px solid currentColor; position: relative; transform: skewX(-15deg);
         }
-        
         .health-bar {
-            height: 100%;
-            background-color: #00ff00;
-            transition: width 0.2s ease-out;
+            height: 100%; background-color: #00ff00; transition: width 0.2s ease-out;
             box-shadow: 0 0 10px #00ff00 inset;
         }
-        .player2-hud .health-bar {
-            margin-left: auto; /* Fill from right for player 2 */
-        }
+        .player2-hud .health-bar { margin-left: auto; }
 
-        /* Spirit Bar */
         .spirit-container {
-            width: 80%;
-            height: 15px;
-            background-color: rgba(255,255,255,0.1);
-            border: 1px solid currentColor;
-            margin-top: -5px;
-            transform: skewX(-15deg);
-            position: relative;
-            overflow: hidden;
+            width: 80%; height: 15px; background-color: rgba(255,255,255,0.1);
+            border: 1px solid currentColor; margin-top: -5px; transform: skewX(-15deg);
+            position: relative; overflow: hidden;
         }
-        
         .spirit-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #ff9900, #ffdd00);
+            height: 100%; width: 0%; background: linear-gradient(90deg, #ff9900, #ffdd00);
             transition: width 0.1s linear;
         }
-        .spirit-bar.full {
-            animation: pulse-spirit 0.5s infinite alternate;
-        }
-        .player2-hud .spirit-bar {
-            margin-left: auto;
-        }
+        .spirit-bar.full { animation: pulse-spirit 0.5s infinite alternate; }
+        .player2-hud .spirit-bar { margin-left: auto; }
 
         @keyframes pulse-spirit {
             from { filter: brightness(1); box-shadow: 0 0 5px #ffdd00; }
             to { filter: brightness(1.5); box-shadow: 0 0 20px #ffdd00; }
         }
 
-        /* Timer */
         #timer {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 3rem;
-            font-weight: 900;
-            color: white;
-            text-shadow: 0 0 15px white;
-            z-index: 20;
-        }
-
-        /* Overlays */
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 30;
-            background: rgba(5, 5, 16, 0.8);
-            backdrop-filter: blur(5px);
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            font-size: 2rem; color: white; text-shadow: 0 0 15px white; z-index: 20;
         }
 
         .hidden { display: none !important; }
 
+        /* --- JUDUL GLITCH CUSTOM FONT --- */
         .title-text {
-            font-size: 6rem;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 10px;
-            background: linear-gradient(to right, var(--neon-blue), var(--neon-pink));
-            -webkit-background-clip: text;
-            color: transparent;
-            text-shadow: 0 0 20px rgba(255,255,255,0.2);
+            font-family: 'Nemesys', sans-serif;
+            font-size: 7rem;
+            position: relative;
+            color: white;
+            text-shadow: 0 0 10px var(--neon-blue), 0 0 30px var(--neon-pink);
             margin-bottom: 2rem;
-            animation: glitch 3s infinite;
+            z-index: 20;
         }
 
-        @keyframes glitch {
-            0% { text-shadow: 2px 2px var(--neon-blue), -2px -2px var(--neon-pink); }
-            5% { text-shadow: -2px -2px var(--neon-blue), 2px 2px var(--neon-pink); }
-            10% { text-shadow: 2px -2px var(--neon-blue), -2px 2px var(--neon-pink); }
-            15% { text-shadow: 2px 2px var(--neon-blue), -2px -2px var(--neon-pink); }
-            100% { text-shadow: 2px 2px var(--neon-blue), -2px -2px var(--neon-pink); }
+        /* Pseudo-elements untuk memotong (clip) dan menggeser teks */
+        .title-text::before, .title-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: transparent;
+            color: white;
+        }
+
+        .title-text::before {
+            left: 4px;
+            text-shadow: -3px 0 var(--neon-pink);
+            animation: text-glitch-1 2.5s infinite linear alternate-reverse;
+        }
+
+        .title-text::after {
+            left: -4px;
+            text-shadow: 3px 0 var(--neon-blue);
+            animation: text-glitch-2 3s infinite linear alternate-reverse;
+        }
+
+        @keyframes text-glitch-1 {
+            0% { clip-path: inset(20% 0 80% 0); }
+            20% { clip-path: inset(60% 0 10% 0); }
+            40% { clip-path: inset(40% 0 50% 0); }
+            60% { clip-path: inset(80% 0 5% 0); }
+            80% { clip-path: inset(10% 0 70% 0); }
+            100% { clip-path: inset(30% 0 40% 0); }
+        }
+
+        @keyframes text-glitch-2 {
+            0% { clip-path: inset(10% 0 60% 0); }
+            20% { clip-path: inset(30% 0 20% 0); }
+            40% { clip-path: inset(70% 0 10% 0); }
+            60% { clip-path: inset(20% 0 50% 0); }
+            80% { clip-path: inset(50% 0 30% 0); }
+            100% { clip-path: inset(5% 0 80% 0); }
         }
 
         .btn-neon {
-            padding: 15px 40px;
-            font-size: 1.5rem;
-            font-family: 'Orbitron', sans-serif;
-            text-transform: uppercase;
-            color: white;
-            background: transparent;
-            border: 2px solid white;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s;
-            margin: 10px;
+            padding: 15px 40px; font-size: 1rem; font-family: 'Press Start 2P', monospace;
+            text-transform: uppercase; color: white; background: rgba(0,0,0,0.5);
+            border: 2px solid white; cursor: pointer; position: relative;
+            overflow: hidden; transition: all 0.3s; margin: 10px; z-index: 20;
+            line-height: 1.5;
         }
-
-        .btn-neon:hover {
-            box-shadow: 0 0 10px white, 0 0 20px white inset;
-        }
-
+        .btn-neon:hover { box-shadow: 0 0 10px white, 0 0 20px white inset; }
         .btn-start { border-color: var(--neon-blue); color: var(--neon-blue); }
         .btn-start:hover { background: var(--neon-blue); color: black; box-shadow: 0 0 20px var(--neon-blue); }
         
         .controls-info {
-            display: flex;
-            gap: 50px;
-            margin-top: 30px;
-            font-size: 1rem;
-            color: #aaa;
+            display: flex; gap: 50px; margin-top: 30px; font-size: 0.7rem; color: #aaa; z-index: 20;
+            background: rgba(0,0,0,0.6); padding: 20px; border: 1px solid #333; line-height: 2;
         }
-        .control-block h3 { color: white; margin-bottom: 10px; font-weight: bold; }
+        .control-block h3 { color: white; margin-bottom: 15px; }
         .key-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid #555;
-            border-radius: 4px;
-            margin: 0 4px;
-            font-family: monospace;
+            display: inline-block; padding: 4px 8px; background: rgba(255,255,255,0.1);
+            border: 1px solid #555; border-radius: 4px; margin: 0 4px;
         }
 
         #result-text {
-            font-size: 4rem;
-            font-weight: bold;
-            margin-bottom: 30px;
-            text-transform: uppercase;
-            text-shadow: 0 0 20px currentColor;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 3rem; margin-bottom: 30px;
+            text-transform: uppercase; text-shadow: 0 0 20px currentColor; z-index: 20;
+            line-height: 1.2; text-align: center;
         }
         
-        /* Character Selection CSS */
+        /* Box UI Pemilihan Karakter (P1 vs P2) */
         .char-preview-box {
-            width: 192px; /* 64 * 3 (Skala 3x) */
-            height: 192px;
-            border: 2px solid;
-            background-color: rgba(255,255,255,0.05);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 10px;
-            box-shadow: 0 0 20px inset;
-        }
-        .sprite-idle {
-            width: 64px;
-            height: 64px;
-            background: url('https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png') left center;
-            animation: play-sprite 1s steps(17) infinite;
-            transform: scale(3); /* Perbesar pixel art */
-            image-rendering: pixelated; /* Jaga agar tetap tajam/pixelated */
+            width: 192px; height: 192px; border: 2px solid; background-color: rgba(255,255,255,0.05);
+            display: flex; justify-content: center; align-items: center; margin-bottom: 10px; box-shadow: 0 0 20px inset;
         }
         .p1-box { color: var(--neon-blue); border-color: var(--neon-blue); }
         .p2-box { color: var(--neon-pink); border-color: var(--neon-pink); }
-        .p1-box .sprite-idle { filter: drop-shadow(0 0 5px var(--neon-blue)); }
-        .p2-box .sprite-idle { filter: drop-shadow(0 0 5px var(--neon-pink)) hue-rotate(90deg); /* Ubah warna untuk membedakan P2 */ }
-
-        @keyframes play-sprite {
-            100% { background-position: -1088px; } /* 64px * 17 frame = 1088px */
+        
+        /* Sprite Player 1 (B_idle, 90px width, 9 frames) */
+        .sprite-idle-p1 {
+            width: 90px; height: 90px; 
+            background: url('https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_idle.png') left center;
+            animation: play-sprite-p1 1s steps(9) infinite; 
+            transform: scale(2); image-rendering: pixelated;
+        }
+        
+        /* Sprite Player 2 (idle bawaan, 64px width, 17 frames) */
+        .sprite-idle-p2 {
+            width: 64px; height: 64px; 
+            background: url('https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png') left center;
+            animation: play-sprite-p2 1s steps(17) infinite; 
+            transform: scale(3); image-rendering: pixelated;
         }
 
-        /* Particle effect canvas */
+        .p2-box .sprite-idle-p2 { filter: drop-shadow(0 0 5px var(--neon-pink)) hue-rotate(240deg) brightness(40%); }
+
+        @keyframes play-sprite-p1 { 100% { background-position: -810px; } }
+        @keyframes play-sprite-p2 { 100% { background-position: -1088px; } }
+
         #particles {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 15;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15;
         }
     </style>
 </head>
 <body>
 
     <div id="game-container">
+        <!-- Komponen Efek Background -->
+        <canvas id="matrixCanvas"></canvas>
+        <div class="scanline-roll"></div>
         
         <!-- Heads Up Display -->
         <div id="hud" class="hidden">
-            <!-- Player 1 Info -->
             <div class="player-hud player1-hud">
-                <div class="name-tag player1-name">P1 <span class="text-sm text-gray-400">BLOK</span></div>
+                <div class="name-tag player1-name">BLOK</div>
                 <div class="bar-container" style="color: var(--neon-blue); border-color: var(--neon-blue);">
                     <div id="p1-health" class="health-bar" style="width: 100%;"></div>
                 </div>
@@ -308,12 +299,10 @@
                 </div>
             </div>
 
-            <!-- Timer -->
             <div id="timer">60</div>
 
-            <!-- Player 2 Info -->
             <div class="player-hud player2-hud">
-                <div class="name-tag player2-name"><span class="text-sm text-gray-400">CYBR</span> P2</div>
+                <div class="name-tag player2-name">CYBR</div>
                 <div class="bar-container" style="color: var(--neon-pink); border-color: var(--neon-pink);">
                     <div id="p2-health" class="health-bar" style="width: 100%;"></div>
                 </div>
@@ -324,9 +313,9 @@
         </div>
 
         <!-- Start Screen -->
-        <div id="start-screen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#050510]">
-            <h1 class="title-text">RUMBLOK</h1>
-            <!-- Ubah ID tombol ini -->
+        <div id="start-screen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-transparent">
+            <!-- Tambahkan data-text agar efek glitch CSS bekerja -->
+            <h1 class="title-text" data-text="RUMBLOK">RUMBLOK</h1>
             <button id="btn-to-select" class="btn-neon btn-start">START BATTLE</button>
             
             <div class="controls-info">
@@ -350,40 +339,37 @@
         </div>
 
         <!-- Character Selection Screen -->
-        <div id="char-select-screen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-[#050510] hidden">
-            <h2 class="text-4xl font-black text-white mb-10 tracking-widest" style="text-shadow: 0 0 10px white;">SELECT FIGHTER</h2>
+        <div id="char-select-screen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-black/60 hidden backdrop-blur-sm">
+            <h2 class="text-2xl text-white mb-10 tracking-widest" style="text-shadow: 0 0 10px white;">SELECT FIGHTER</h2>
             
             <div class="flex gap-20 mb-10">
-                <!-- Player 1 Select -->
                 <div class="flex flex-col items-center">
-                    <h3 class="text-neon-blue font-bold text-2xl mb-4">P1 BLOK</h3>
+                    <h3 class="text-neon-blue text-lg mb-4 tracking-widest leading-relaxed">P1 BLOK</h3>
                     <div class="char-preview-box p1-box">
-                        <div class="sprite-idle"></div>
+                        <div class="sprite-idle-p1"></div>
                     </div>
-                    <p class="text-gray-400">Ready</p>
+                    <p class="text-gray-400 mt-2 text-xs">Ready</p>
                 </div>
 
                 <div class="flex flex-col items-center justify-center">
-                    <span class="text-6xl text-white font-black opacity-50">VS</span>
+                    <span class="text-3xl text-white opacity-50">VS</span>
                 </div>
 
-                <!-- Player 2 Select -->
                 <div class="flex flex-col items-center">
-                    <h3 class="text-neon-pink font-bold text-2xl mb-4">P2 CYBR</h3>
+                    <h3 class="text-neon-pink text-lg mb-4 tracking-widest leading-relaxed">P2 CYBR</h3>
                     <div class="char-preview-box p2-box">
-                        <div class="sprite-idle" style="transform: scale(-3, 3);"></div> <!-- Dibalik secara horizontal -->
+                        <div class="sprite-idle-p2" style="transform: scale(-3, 3);"></div>
                     </div>
-                    <p class="text-gray-400">Ready</p>
+                    <p class="text-gray-400 mt-2 text-xs">Ready</p>
                 </div>
             </div>
 
-            <!-- Tombol untuk mulai bertanding -->
-            <button id="btn-start-game" class="btn-neon btn-start text-2xl px-10 py-4">FIGHT!</button>
+            <button id="btn-start-game" class="btn-neon btn-start px-10 py-4 mt-6">FIGHT!</button>
         </div>
 
         <!-- Game Over Screen -->
         <div id="game-over-screen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-black/80 backdrop-blur-sm hidden">
-            <h2 id="result-text" class="text-white">TIME OVER</h2>
+            <h2 id="result-text" class="text-white" data-text="TIME OVER">TIME OVER</h2>
             <button id="btn-restart" class="btn-neon btn-start">REMATCH</button>
         </div>
 
@@ -396,25 +382,58 @@
         const ctx = canvas.getContext('2d');
         const particleCanvas = document.getElementById('particles');
         const pCtx = particleCanvas.getContext('2d');
+        const matrixCanvas = document.getElementById('matrixCanvas');
+        const mCtx = matrixCanvas.getContext('2d');
 
-        // Dynamic resizing
+        // Matrix Rain Setup
+        const mFontSize = 14;
+        let mColumns, mDrops = [];
+
+        function initMatrix() {
+            matrixCanvas.width = matrixCanvas.parentElement.clientWidth;
+            matrixCanvas.height = matrixCanvas.parentElement.clientHeight;
+            mColumns = Math.floor(matrixCanvas.width / mFontSize);
+            mDrops = [];
+            for (let x = 0; x < mColumns; x++) {
+                mDrops[x] = Math.random() * matrixCanvas.height / mFontSize; 
+            }
+        }
+
+        function drawMatrix() {
+            mCtx.fillStyle = 'rgba(5, 5, 16, 0.15)'; 
+            mCtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+            mCtx.font = mFontSize + 'px monospace';
+            
+            for (let i = 0; i < mDrops.length; i++) {
+                const text = Math.floor(Math.random() * 10).toString(); 
+                mCtx.fillStyle = Math.random() > 0.5 ? '#00f3ff' : '#b829ff'; 
+                mCtx.fillText(text, i * mFontSize, mDrops[i] * mFontSize);
+                
+                if (mDrops[i] * mFontSize > matrixCanvas.height && Math.random() > 0.975) {
+                    mDrops[i] = 0;
+                }
+                mDrops[i]++;
+            }
+        }
+
         function resize() {
             canvas.width = canvas.parentElement.clientWidth;
             canvas.height = canvas.parentElement.clientHeight;
             particleCanvas.width = canvas.width;
             particleCanvas.height = canvas.height;
+            initMatrix();
         }
         window.addEventListener('resize', resize);
         resize();
 
-        // Game Constants
+        setInterval(drawMatrix, 50);
+
         const GRAVITY = 0.6;
-        const FLOOR_OFFSET = 100; // Distance from bottom
+        const FLOOR_OFFSET = 100;
         const MAX_HEALTH = 100;
         const MAX_SPIRIT = 100;
-        const GAME_DURATION = 60; // seconds
+        const GAME_DURATION = 60;
 
-        // UI Elements
         const screens = {
             start: document.getElementById('start-screen'),
             select: document.getElementById('char-select-screen'),
@@ -430,13 +449,12 @@
             resultText: document.getElementById('result-text')
         };
 
-        let gameState = 'start'; // start, playing, over
+        let gameState = 'start';
         let timer = GAME_DURATION;
         let timerInterval;
         let animationId;
         let lastTime = 0;
 
-        // Input handling
         const keys = {
             a: { pressed: false }, d: { pressed: false }, w: { pressed: false },
             f: { pressed: false }, g: { pressed: false }, h: { pressed: false },
@@ -446,7 +464,6 @@
 
         window.addEventListener('keydown', (e) => {
             if (keys[e.key]) keys[e.key].pressed = true;
-            // Map space to 'h' for P1 power for easier use sometimes
             if (e.code === 'Space') keys['h'].pressed = true;
         });
 
@@ -456,37 +473,28 @@
         });
 
         class ParticleSystem {
-            constructor() {
-                this.particles = [];
-            }
+            constructor() { this.particles = []; }
             
             spawnHit(x, y, color, count = 10) {
                 for (let i = 0; i < count; i++) {
                     this.particles.push({
                         x: x, y: y,
-                        vx: (Math.random() - 0.5) * 10,
-                        vy: (Math.random() - 0.5) * 10,
-                        life: 1,
-                        decay: Math.random() * 0.05 + 0.02,
-                        color: color,
-                        size: Math.random() * 4 + 2
+                        vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
+                        life: 1, decay: Math.random() * 0.05 + 0.02,
+                        color: color, size: Math.random() * 4 + 2
                     });
                 }
             }
 
             spawnPower(x, y, color, dir) {
-                // Large beam effect particles
-                for (let i = 0; i < 30; i++) {
+                for (let i = 0; i < 60; i++) {
                     this.particles.push({
-                        x: x + (Math.random() * 50 * dir), 
-                        y: y + (Math.random() - 0.5) * 40,
-                        vx: dir * (Math.random() * 15 + 10),
-                        vy: (Math.random() - 0.5) * 2,
-                        life: 1,
-                        decay: Math.random() * 0.02 + 0.01,
-                        color: color,
-                        size: Math.random() * 6 + 2,
-                        isBeam: true
+                        x: x + (Math.random() * 1200 * dir), 
+                        y: y + (Math.random() - 0.5) * 60,
+                        vx: dir * (Math.random() * 40 + 10), 
+                        vy: (Math.random() - 0.5) * 8,
+                        life: 1, decay: Math.random() * 0.05 + 0.02,
+                        color: color, size: Math.random() * 8 + 2, isBeam: true
                     });
                 }
             }
@@ -495,14 +503,9 @@
                 ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
                 for (let i = this.particles.length - 1; i >= 0; i--) {
                     let p = this.particles[i];
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.life -= p.decay;
+                    p.x += p.vx; p.y += p.vy; p.life -= p.decay;
 
-                    if (p.life <= 0) {
-                        this.particles.splice(i, 1);
-                        continue;
-                    }
+                    if (p.life <= 0) { this.particles.splice(i, 1); continue; }
 
                     ctx.globalAlpha = p.life;
                     ctx.fillStyle = p.color;
@@ -512,103 +515,73 @@
                     ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
                     ctx.fill();
                 }
-                ctx.globalAlpha = 1;
-                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1; ctx.shadowBlur = 0;
             }
         }
         const particles = new ParticleSystem();
 
         class Fighter {
-            constructor({position, velocity, color, name, isPlayer1}) {
-                this.position = position;
-                this.velocity = velocity;
-                this.width = 90;
-                this.height = 90;
-                this.color = color;
-                this.name = name;
-                this.isPlayer1 = isPlayer1;
-                this.facingRight = isPlayer1;
+            constructor({position, velocity, color, name, isPlayer1, spriteConfig, spriteSize}) {
+                this.position = position; this.velocity = velocity;
+                // Ukuran diperbesar 2x lipat (sebelumnya 90x90)
+                this.width = 180; this.height = 180;
+                this.color = color; this.name = name;
+                this.isPlayer1 = isPlayer1; this.facingRight = isPlayer1;
+                this.health = MAX_HEALTH; this.spirit = 0; this.isDead = false;
+                this.state = 'idle'; this.stateTimer = 0;
+                this.powerLaserFired = false; // Flag khusus sinkronisasi laser
                 
-                this.health = MAX_HEALTH;
-                this.spirit = 0;
-                this.isDead = false;
-
-                // States: idle, walk, jump, punch, kick, power, hit
-                this.state = 'idle';
-                this.stateTimer = 0;
+                // Ukuran bawaan sprite frame (90 untuk P1, 64 untuk P2)
+                this.spriteSize = spriteSize;
                 
-                // Konfigurasi Kumpulan Sprite Sheet
-                this.sprites = {
-                    idle: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png', frames: 17 },
-                    walk: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/walk.png', frames: 7 },
-                    jump: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/jumpy.png', frames: 6 },
-                    punch: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/punch.png', frames: 13 },
-                    kick: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/kick.png', frames: 17 },
-                    laser: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/laser.png', frames: 5 }
-                };
+                // Konfigurasi disuntik dari luar (mendukung karakter berbeda)
+                this.sprites = spriteConfig;
 
-                // Preload semua gambar
                 for (const key in this.sprites) {
                     this.sprites[key].img = new Image();
                     this.sprites[key].img.src = this.sprites[key].src;
                 }
 
                 this.currentSprite = this.sprites.idle;
-                this.currentFrame = 0;
-                this.framesElapsed = 0;
-                this.framesHold = 4; // Kecepatan dasar animasi
-
-                // Hitboxes
+                this.currentFrame = 0; this.framesElapsed = 0; this.framesHold = 4;
                 this.attackBox = {
                     position: { x: this.position.x, y: this.position.y },
-                    width: 0,
-                    height: 0,
-                    damage: 0,
-                    spiritGain: 0,
-                    active: false
+                    width: 0, height: 0, damage: 0, spiritGain: 0, active: false
                 };
             }
 
-            // Fungsi untuk berpindah animasi dengan mulus
             switchState(newState) {
                 if (this.state === newState) return;
-                this.state = newState;
-                this.currentFrame = 0;
-                this.framesElapsed = 0;
+                this.state = newState; this.currentFrame = 0; this.framesElapsed = 0;
+                this.powerLaserFired = false; // Reset status pelacakan laser
 
                 switch (newState) {
                     case 'idle': this.currentSprite = this.sprites.idle; this.framesHold = 4; break;
                     case 'walk': this.currentSprite = this.sprites.walk; this.framesHold = 4; break;
                     case 'jump': this.currentSprite = this.sprites.jump; this.framesHold = 6; break;
-                    case 'punch': this.currentSprite = this.sprites.punch; this.framesHold = 2; break; // Lebih cepat
-                    case 'kick': this.currentSprite = this.sprites.kick; this.framesHold = 2; break; 
+                    case 'punch': this.currentSprite = this.sprites.punch; this.framesHold = 3; break;
+                    case 'kick': this.currentSprite = this.sprites.kick; this.framesHold = 3; break; 
                     case 'hit': this.currentSprite = this.sprites.idle; this.framesHold = 4; break; 
-                    case 'power': this.currentSprite = this.sprites.idle; this.framesHold = 2; break; 
+                    case 'power': this.currentSprite = this.sprites.power; this.framesHold = 3; break; 
                 }
             }
 
             draw() {
-                // Update facing direction (auto-aim)
                 if (this.state !== 'dead') {
                      let opponent = this.isPlayer1 ? player2 : player1;
-                     if (opponent) {
-                         this.facingRight = this.position.x < opponent.position.x;
-                     }
+                     if (opponent) this.facingRight = this.position.x < opponent.position.x;
                 }
 
                 ctx.save();
                 ctx.translate(this.position.x + this.width / 2, this.position.y + this.height / 2);
                 ctx.scale(this.facingRight ? 1 : -1, 1);
                 
-                // Update frame animasi
                 if (this.state !== 'dead') {
                     this.framesElapsed++;
                     if (this.framesElapsed % this.framesHold === 0) {
-                        // Untuk serangan, tahan di frame terakhir (tidak mengulang/loop dari awal saat memukul)
-                        if (['punch', 'kick'].includes(this.state)) {
-                            if (this.currentFrame < this.currentSprite.frames - 1) {
-                                this.currentFrame++;
-                            }
+                        // Tambahkan 'power' ke dalam pengecekan agar frame berhenti (freeze) di frame terakhir
+                        if (['punch', 'kick', 'power'].includes(this.state)) {
+                            if (this.currentFrame < this.currentSprite.frames - 1) this.currentFrame++;
                         } else {
                             this.currentFrame = (this.currentFrame + 1) % this.currentSprite.frames;
                         }
@@ -616,73 +589,53 @@
                 }
 
                 ctx.imageSmoothingEnabled = false; 
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 20; ctx.shadowColor = this.color;
 
-                let drawX = -this.width / 2;
-                let drawY = -this.height / 2;
+                let drawX = -this.width / 2; let drawY = -this.height / 2;
                 
-                // Efek visual khusus saat terkena pukulan atau mengeluarkan jurus
-                if (this.state === 'hit') {
-                    ctx.translate(-10, 0); 
-                    ctx.rotate(-0.2);
-                } else if (this.state === 'power') {
+                if (this.state === 'hit') { ctx.translate(-10, 0); ctx.rotate(-0.2); } 
+                else if (this.state === 'power') {
                     ctx.shadowBlur = 40; 
-                    this.currentFrame = Math.floor(Math.random() * this.currentSprite.frames); 
                 }
 
-                // Pewarnaan Player 2 & Efek Hit
-                let currentFilter = 'none';
-                if (!this.isPlayer1) currentFilter = 'hue-rotate(90deg)'; 
+                // Filter warna hanya untuk Player 2 agar warna P1 yang baru tidak berubah
+                let currentFilter = 'none'; 
+                if (!this.isPlayer1) currentFilter = 'hue-rotate(240deg) brightness(40%)';
+                
                 if (this.state === 'hit') {
                     currentFilter = currentFilter !== 'none' ? currentFilter + ' brightness(200%)' : 'brightness(200%)';
                 }
                 ctx.filter = currentFilter;
 
-                // Render Sprite aktif
+                // Gunakan this.spriteSize agar crop frame sesuai dengan ukuran asal (90px vs 64px)
                 ctx.drawImage(
-                    this.currentSprite.img,
-                    this.currentFrame * 64, 
-                    0,                      
-                    64,                     
-                    64,                     
-                    drawX,                  
-                    drawY,                  
-                    this.width,             
-                    this.height             
+                    this.currentSprite.img, this.currentFrame * this.spriteSize, 0, this.spriteSize, this.spriteSize,
+                    drawX, drawY, this.width, this.height             
                 );
 
                 ctx.filter = 'none';
 
-                // Render Power Laser (Semburan Energi Statis)
+                // --- RENDER SINAR LASER DARI WAJAH KESELURUH ARENA ---
                 if (this.state === 'power' && this.attackBox.active) {
-                    // Diperlambat dengan membagi frameElapsed dengan 8 (sebelumnya 4)
-                    let laserFrame = Math.floor(this.framesElapsed / 8) % this.sprites.laser.frames;
+                    let beamY = -this.height / 2 + 60; // Tinggi wajah/mata dari titik tengah
+                    let beamHeight = 40 + Math.random() * 30; // Efek bergetar/flicker tinggi laser
+
+                    let powerColor = '#00f3ff'; 
+
+                    ctx.shadowBlur = 40; 
+                    ctx.shadowColor = powerColor;
+                    ctx.fillStyle = powerColor;
                     
+                    ctx.fillRect(0, beamY - beamHeight / 2, 1200, beamHeight); 
+                    
+                    ctx.fillStyle = 'white';
                     ctx.shadowBlur = 20;
-                    ctx.shadowColor = this.color;
-                    if (!this.isPlayer1) ctx.filter = 'hue-rotate(90deg)';
+                    ctx.shadowColor = 'white';
+                    ctx.fillRect(0, beamY - beamHeight / 4, 1200, beamHeight / 2);
                     
-                    // Hitung skala agar ukuran laser proporsional dengan pembesaran karakter
-                    let scale = this.height / 64; 
-                    let scaledWidth = 164 * scale;
-                    let scaledHeight = 64 * scale;
-                    
-                    // Offset X untuk memundurkan posisi laser agar lebih pas
-                    let xOffset = 20; // Sesuaikan nilai ini jika masih kurang pas
-
-                    ctx.drawImage(
-                        this.sprites.laser.img,
-                        laserFrame * 164, 0, 164, 64,
-                        this.width / 2 - xOffset, // Posisi X dimundurkan sedikit dengan xOffset
-                        -scaledHeight / 2, // Posisi Y di-tengah (center)
-                        scaledWidth, 
-                        scaledHeight
-                    );
-                    
-                    ctx.filter = 'none';
+                    ctx.fillStyle = Math.random() > 0.5 ? 'white' : powerColor;
+                    ctx.fillRect(Math.random() * 600, beamY - 5, Math.random() * 300, 10);
                 }
-
                 ctx.restore();
             }
 
@@ -690,123 +643,104 @@
                 this.position.y += this.velocity.y;
                 this.velocity.y += GRAVITY;
 
-                // Floor collision
                 const floorY = canvas.height - FLOOR_OFFSET - this.height;
-                if (this.position.y >= floorY) {
-                    this.position.y = floorY;
-                    this.velocity.y = 0;
-                }
+                if (this.position.y >= floorY) { this.position.y = floorY; this.velocity.y = 0; }
 
-                // Wall collision
                 if (this.position.x < 0) this.position.x = 0;
                 if (this.position.x + this.width > canvas.width) this.position.x = canvas.width - this.width;
 
                 this.position.x += this.velocity.x;
 
-                // Hitungan waktu transisi state serangan/hit ke netral
+                // --- LOGIKA SINKRONISASI LASER POWER ---
+                // Mengecek apakah animasi sedang power dan SUDAH mencapai frame terakhir (freeze)
+                if (this.state === 'power' && !this.powerLaserFired && this.currentFrame === this.currentSprite.frames - 1) {
+                    this.powerLaserFired = true; // Tandai bahwa laser sudah tertembak
+
+                    this.attackBox.width = 1200; 
+                    this.attackBox.height = 60;
+                    this.attackBox.damage = 6; 
+                    this.attackBox.spiritGain = 0; 
+                    this.attackBox.active = true;
+
+                    let dir = this.facingRight ? 1 : -1;
+                    let startX = this.position.x + this.width / 2;
+                    
+                    let powerParticleColor = Math.random() > 0.5 ? '#00f3ff' : 'white';
+                    particles.spawnPower(startX, this.position.y + 60, powerParticleColor, dir); 
+                    
+                    // Reset timer ke 800ms. Ini berarti laser dan karakter akan freeze selama 800ms sebelum kembali idle
+                    this.stateTimer = 800; 
+
+                    let shakeInterval = setInterval(() => {
+                        if(this.state !== 'power' || !this.attackBox.active) {
+                            clearInterval(shakeInterval);
+                            canvas.style.transform = 'translate(0,0)';
+                            return;
+                        }
+                        canvas.style.transform = `translate(${(Math.random()-0.5)*20}px, ${(Math.random()-0.5)*20}px)`;
+                    }, 40);
+                }
+
                 if (this.stateTimer > 0) {
                     this.stateTimer -= deltaTime;
                     if (this.stateTimer <= 0) {
                         this.attackBox.active = false;
-                        if (['punch', 'kick', 'power', 'hit'].includes(this.state)) {
-                            this.switchState('idle'); // Kembalikan ke netral, akan di-override animate() kalau sedang jalan/lompat
-                        }
+                        if (['punch', 'kick', 'power', 'hit'].includes(this.state)) this.switchState('idle');
                     }
                 }
 
-                // Posisi attack box relatif terhadap tubuh
                 if (this.attackBox.active) {
-                    if (this.facingRight) {
-                        this.attackBox.position.x = this.position.x + this.width;
-                    } else {
-                        this.attackBox.position.x = this.position.x - this.attackBox.width;
+                    if (this.facingRight) { 
+                        this.attackBox.position.x = this.position.x + this.width / 2; 
+                    } else { 
+                        this.attackBox.position.x = this.position.x + this.width / 2 - this.attackBox.width; 
                     }
                     
-                    // Sesuaikan posisi Y hitbox khusus untuk jurus Power agar di tengah karakter
-                    if (this.state === 'power') {
-                        this.attackBox.position.y = this.position.y + (this.height - this.attackBox.height) / 2;
-                    } else {
-                        this.attackBox.position.y = this.position.y + this.height / 4;
+                    if (this.state === 'power') { 
+                        this.attackBox.position.y = this.position.y + 30; 
+                    } else { 
+                        this.attackBox.position.y = this.position.y + this.height / 4; 
                     }
                 }
             }
 
             punch() {
                 if (['punch', 'kick', 'power', 'hit'].includes(this.state)) return;
-                
-                this.switchState('punch');
-                this.stateTimer = 400; // ms (waktu yg cukup untuk 13 frames)
-                this.attackBox.width = 60;
-                this.attackBox.height = 40;
-                this.attackBox.damage = 5;
-                this.attackBox.spiritGain = 10;
-                
+                this.switchState('punch'); this.stateTimer = 400;
+                this.attackBox.width = 120; this.attackBox.height = 80; this.attackBox.damage = 5; this.attackBox.spiritGain = 10;
                 setTimeout(() => { if(this.state === 'punch') this.attackBox.active = true; }, 150);
                 setTimeout(() => { this.attackBox.active = false; }, 250);
             }
 
             kick() {
                 if (['punch', 'kick', 'power', 'hit'].includes(this.state)) return;
-                
-                this.switchState('kick');
-                this.stateTimer = 500; // ms (waktu yg cukup untuk 17 frames)
-                this.attackBox.width = 80;
-                this.attackBox.height = 30;
-                this.attackBox.damage = 8;
-                this.attackBox.spiritGain = 15;
-
+                this.switchState('kick'); this.stateTimer = 500;
+                this.attackBox.width = 160; this.attackBox.height = 60; this.attackBox.damage = 8; this.attackBox.spiritGain = 15;
                 setTimeout(() => { if(this.state === 'kick') this.attackBox.active = true; }, 200);
                 setTimeout(() => { this.attackBox.active = false; }, 350);
             }
 
             powerMove() {
-                // if (this.spirit < MAX_SPIRIT) return; // Syarat diabaikan untuk uji coba
+                // if (this.spirit < MAX_SPIRIT) return; // Mode Uji Coba: Nonaktif
                 if (['punch', 'kick', 'power', 'hit'].includes(this.state)) return;
                 
-                // this.spirit = 0; // Pengosongan spirit dinonaktifkan untuk uji coba
-                // this.updateSpiritBar();
+                this.switchState('power'); 
                 
-                this.switchState('power');
-                this.stateTimer = 1000; // Perpanjang durasi state power menjadi 1 detik (1000ms)
-                
-                canvas.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
-                setTimeout(() => canvas.style.transform = 'translate(0,0)', 100);
-
-                // Laser akan muncul lebih cepat (150ms setelah tombol ditekan)
-                setTimeout(() => {
-                    if(this.state === 'power') {
-                        // Sesuaikan hitbox attackBox agar menyamai ukuran visual laser yang membesar
-                        let scale = this.height / 64;
-                        this.attackBox.width = 164 * scale; 
-                        this.attackBox.height = 64 * scale;
-                        this.attackBox.damage = 25;
-                        this.attackBox.spiritGain = 0;
-                        this.attackBox.active = true;
-
-                        let dir = this.facingRight ? 1 : -1;
-                        let startX = this.facingRight ? this.position.x + this.width : this.position.x;
-                        particles.spawnPower(startX, this.position.y + this.height/2, this.color, dir);
-                    }
-                }, 150); 
-
-                // Laser dan hitbox baru menghilang setelah 800ms
-                setTimeout(() => { this.attackBox.active = false; }, 950);
+                // Atur timer sementara yang cukup panjang. Nilai timer ini akan di-override
+                // menjadi 800ms oleh logika di dalam update() setelah mencapai frame terakhir.
+                this.stateTimer = 5000; 
             }
 
             takeHit(damage) {
                 this.health -= damage;
                 if (this.health <= 0) {
-                    this.health = 0;
-                    this.isDead = true;
-                    this.switchState('hit'); 
+                    this.health = 0; this.isDead = true; this.switchState('hit'); 
                 } else {
-                    this.switchState('hit');
-                    this.stateTimer = 200; 
+                    this.switchState('hit'); this.stateTimer = 200; 
                 }
                 
                 this.velocity.x = this.facingRight ? -3 : 3;
                 setTimeout(() => this.velocity.x = 0, 100);
-
                 this.updateHealthBar();
                 particles.spawnHit(this.position.x + this.width/2, this.position.y + this.height/2, this.color, 15);
             }
@@ -831,44 +765,49 @@
                 const bar = this.isPlayer1 ? ui.p1Spirit : ui.p2Spirit;
                 const percent = (this.spirit / MAX_SPIRIT) * 100;
                 bar.style.width = `${percent}%`;
-                if (percent === 100) bar.classList.add('full');
-                else bar.classList.remove('full');
+                if (percent === 100) bar.classList.add('full'); else bar.classList.remove('full');
             }
         }
 
-        let player1;
-        let player2;
+        // Konfigurasi Sprite untuk masing-masing karakter
+        const p1SpritesConfig = {
+            idle: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_idle.png', frames: 9 },
+            walk: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_walk.png', frames: 9 },
+            jump: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_jump.png', frames: 9 },
+            punch: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_Punch.png', frames: 8 },
+            kick: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_kick.png', frames: 8 },
+            power: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_power.png', frames: 13 }
+        };
+
+        const p2SpritesConfig = {
+            idle: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png', frames: 17 },
+            walk: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/walk.png', frames: 7 },
+            jump: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/jumpy.png', frames: 6 },
+            punch: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/punch.png', frames: 13 },
+            kick: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/kick.png', frames: 17 },
+            power: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png', frames: 17 } // P2 fallback
+        };
+
+        let player1; let player2;
 
         function initGame() {
-            // Player 1 (Blue)
             player1 = new Fighter({
-                position: { x: 150, y: 0 },
-                velocity: { x: 0, y: 0 },
-                color: 'var(--neon-blue)',
-                name: 'P1',
-                isPlayer1: true
+                position: { x: 150, y: 0 }, velocity: { x: 0, y: 0 },
+                color: 'var(--neon-blue)', name: 'P1', isPlayer1: true,
+                spriteConfig: p1SpritesConfig, spriteSize: 90
             });
-
-            // Player 2 (Pink)
             player2 = new Fighter({
-                position: { x: canvas.width - 200, y: 0 },
-                velocity: { x: 0, y: 0 },
-                color: 'var(--neon-pink)',
-                name: 'P2',
-                isPlayer1: false
+                // Posisi awal dimundurkan lebih banyak agar badan yang besar tidak keluar frame
+                position: { x: canvas.width - 330, y: 0 }, velocity: { x: 0, y: 0 },
+                color: 'var(--neon-pink)', name: 'P2', isPlayer1: false,
+                spriteConfig: p2SpritesConfig, spriteSize: 64
             });
 
-            timer = GAME_DURATION;
-            ui.timer.innerText = timer;
-            
-            // Reset UI bars
+            timer = GAME_DURATION; ui.timer.innerText = timer;
             [player1, player2].forEach(p => {
-                p.health = MAX_HEALTH;
-                p.spirit = MAX_SPIRIT; // Spirit disetel langsung PENUH untuk uji coba
-                p.updateHealthBar();
-                p.updateSpiritBar();
+                p.health = MAX_HEALTH; p.spirit = MAX_SPIRIT; // Spirit disetel Max untuk tes Power
+                p.updateHealthBar(); p.updateSpiritBar();
             });
-
             particles.particles = [];
         }
 
@@ -889,200 +828,112 @@
 
             animationId = requestAnimationFrame(animate);
 
-            // Clear canvas (black with slight trail effect)
-            ctx.fillStyle = 'rgba(5, 5, 16, 0.5)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Bersihkan kanvas agar transparan, melihat ke efek background container
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw Background Elements (Grid lines)
-            ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+            // Lantai Game (Grid Biru Neon)
+            ctx.strokeStyle = 'rgba(0, 243, 255, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             const floorY = canvas.height - FLOOR_OFFSET;
-            ctx.moveTo(0, floorY);
-            ctx.lineTo(canvas.width, floorY);
-            ctx.stroke();
+            ctx.moveTo(0, floorY); ctx.lineTo(canvas.width, floorY); ctx.stroke();
             
-            // Perspective grid
             for(let i=-5; i<15; i++) {
                 ctx.beginPath();
-                ctx.moveTo(canvas.width/2, floorY - 50);
-                ctx.lineTo(i * 150, canvas.height);
-                ctx.stroke();
+                ctx.moveTo(canvas.width/2, floorY - 50); ctx.lineTo(i * 150, canvas.height); ctx.stroke();
             }
 
-            // --- Player 1 Logic ---
-            player1.velocity.x = 0;
-            const floorP1 = canvas.height - FLOOR_OFFSET - player1.height;
-            
+            // Logic Player 1
+            player1.velocity.x = 0; const floorP1 = canvas.height - FLOOR_OFFSET - player1.height;
             if (!['hit', 'power'].includes(player1.state) && !player1.isDead) {
                 let isMovingP1 = false;
-                
-                // Horizontal Movement
-                if (keys.a.pressed && player1.position.x > 0) {
-                    player1.velocity.x = -5;
-                    isMovingP1 = true;
-                } else if (keys.d.pressed && player1.position.x < canvas.width - player1.width) {
-                    player1.velocity.x = 5;
-                    isMovingP1 = true;
-                }
+                if (keys.a.pressed && player1.position.x > 0) { player1.velocity.x = -5; isMovingP1 = true; } 
+                else if (keys.d.pressed && player1.position.x < canvas.width - player1.width) { player1.velocity.x = 5; isMovingP1 = true; }
+                if (['punch', 'kick'].includes(player1.state) && player1.position.y >= floorP1) player1.velocity.x = 0; 
+                if (keys.w.pressed && player1.position.y >= floorP1 && !['punch', 'kick'].includes(player1.state)) player1.velocity.y = -15;
 
-                // Berhenti bergerak horizontal jika sedang menyerang di darat
-                if (['punch', 'kick'].includes(player1.state) && player1.position.y >= floorP1) {
-                    player1.velocity.x = 0; 
-                }
-
-                // Jump (Hanya bisa saat di tanah dan tidak sedang menyerang)
-                if (keys.w.pressed && player1.position.y >= floorP1 && !['punch', 'kick'].includes(player1.state)) {
-                    player1.velocity.y = -15;
-                }
-
-                // Attacks
                 if (!['punch', 'kick'].includes(player1.state)) {
-                    if (keys.f.pressed) player1.punch();
-                    else if (keys.g.pressed) player1.kick();
-                    else if (keys.h.pressed) player1.powerMove();
+                    if (keys.f.pressed) player1.punch(); else if (keys.g.pressed) player1.kick(); else if (keys.h.pressed) player1.powerMove();
                 }
 
-                // Penentuan Animasi Dasar (Berdasarkan posisi dan kecepatan)
                 if (!['punch', 'kick', 'power', 'hit'].includes(player1.state)) {
-                    if (player1.position.y < floorP1) {
-                        player1.switchState('jump');
-                    } else if (isMovingP1) {
-                        player1.switchState('walk');
-                    } else {
-                        player1.switchState('idle');
-                    }
+                    if (player1.position.y < floorP1) player1.switchState('jump');
+                    else if (isMovingP1) player1.switchState('walk'); else player1.switchState('idle');
                 }
             }
 
-            // --- Player 2 Logic ---
-            player2.velocity.x = 0;
-            const floorP2 = canvas.height - FLOOR_OFFSET - player2.height;
-            
+            // Logic Player 2
+            player2.velocity.x = 0; const floorP2 = canvas.height - FLOOR_OFFSET - player2.height;
             if (!['hit', 'power'].includes(player2.state) && !player2.isDead) {
                 let isMovingP2 = false;
-                
-                if (keys.ArrowLeft.pressed && player2.position.x > 0) {
-                    player2.velocity.x = -5;
-                    isMovingP2 = true;
-                } else if (keys.ArrowRight.pressed && player2.position.x < canvas.width - player2.width) {
-                    player2.velocity.x = 5;
-                    isMovingP2 = true;
-                }
-
-                if (['punch', 'kick'].includes(player2.state) && player2.position.y >= floorP2) {
-                    player2.velocity.x = 0;
-                }
-
-                if (keys.ArrowUp.pressed && player2.position.y >= floorP2 && !['punch', 'kick'].includes(player2.state)) {
-                    player2.velocity.y = -15;
-                }
+                if (keys.ArrowLeft.pressed && player2.position.x > 0) { player2.velocity.x = -5; isMovingP2 = true; } 
+                else if (keys.ArrowRight.pressed && player2.position.x < canvas.width - player2.width) { player2.velocity.x = 5; isMovingP2 = true; }
+                if (['punch', 'kick'].includes(player2.state) && player2.position.y >= floorP2) player2.velocity.x = 0;
+                if (keys.ArrowUp.pressed && player2.position.y >= floorP2 && !['punch', 'kick'].includes(player2.state)) player2.velocity.y = -15;
 
                 if (!['punch', 'kick'].includes(player2.state)) {
-                    if (keys.k.pressed) player2.punch();
-                    else if (keys.l.pressed) player2.kick();
-                    else if (keys[';'].pressed) player2.powerMove();
+                    if (keys.k.pressed) player2.punch(); else if (keys.l.pressed) player2.kick(); else if (keys[';'].pressed) player2.powerMove();
                 }
 
                 if (!['punch', 'kick', 'power', 'hit'].includes(player2.state)) {
-                    if (player2.position.y < floorP2) {
-                        player2.switchState('jump');
-                    } else if (isMovingP2) {
-                        player2.switchState('walk');
-                    } else {
-                        player2.switchState('idle');
-                    }
+                    if (player2.position.y < floorP2) player2.switchState('jump');
+                    else if (isMovingP2) player2.switchState('walk'); else player2.switchState('idle');
                 }
             }
 
-            // Update & Draw
-            player1.update(deltaTime);
-            player2.update(deltaTime);
-
-            player1.draw();
-            player2.draw();
-            
+            player1.update(deltaTime); player2.update(deltaTime);
+            player1.draw(); player2.draw();
             particles.updateAndDraw(pCtx);
 
-            // --- Collision Detection Logic ---
-            // Melee P1 hits P2
-            if (player1.attackBox.active && 
-                rectangularCollision({ rectangle1: player1.attackBox, rectangle2: player2 }) &&
-                player2.state !== 'hit' && !player2.isDead) {
+            // Tabrakan (Hit Detection)
+            if (player1.attackBox.active && rectangularCollision({ rectangle1: player1.attackBox, rectangle2: player2 }) && player2.state !== 'hit' && !player2.isDead) {
+                // Jangan nonaktifkan hitbox jika ini adalah serangan POWER (Laser)
+                if (player1.state !== 'power') player1.attackBox.active = false; 
                 
-                player1.attackBox.active = false; // hit once per attack
-                player2.takeHit(player1.attackBox.damage);
+                player2.takeHit(player1.attackBox.damage); 
                 player1.addSpirit(player1.attackBox.spiritGain);
             }
-
-            // Melee P2 hits P1
-            if (player2.attackBox.active && 
-                rectangularCollision({ rectangle1: player2.attackBox, rectangle2: player1 }) &&
-                player1.state !== 'hit' && !player1.isDead) {
+            if (player2.attackBox.active && rectangularCollision({ rectangle1: player2.attackBox, rectangle2: player1 }) && player1.state !== 'hit' && !player1.isDead) {
+                // Jangan nonaktifkan hitbox jika ini adalah serangan POWER (Laser)
+                if (player2.state !== 'power') player2.attackBox.active = false; 
                 
-                player2.attackBox.active = false;
-                player1.takeHit(player2.attackBox.damage);
+                player1.takeHit(player2.attackBox.damage); 
                 player2.addSpirit(player2.attackBox.spiritGain);
             }
 
-            // End game check based on health
-            if (player1.health <= 0 || player2.health <= 0) {
-                determineWinner({ player1, player2, timerId: timerInterval });
-            }
+            if (player1.health <= 0 || player2.health <= 0) determineWinner({ player1, player2, timerId: timerInterval });
         }
 
         function decreaseTimer() {
-            if (timer > 0) {
-                timer--;
-                ui.timer.innerText = timer;
-            }
-
-            if (timer === 0) {
-                determineWinner({ player1, player2, timerId: timerInterval });
-            }
+            if (timer > 0) { timer--; ui.timer.innerText = timer; }
+            if (timer === 0) determineWinner({ player1, player2, timerId: timerInterval });
         }
 
         function determineWinner({ player1, player2, timerId }) {
-            clearInterval(timerId);
-            gameState = 'over';
-            
+            clearInterval(timerId); gameState = 'over';
             screens.over.classList.remove('hidden');
             
             if (player1.health === player2.health) {
-                ui.resultText.innerText = 'TIE GAME';
-                ui.resultText.style.color = 'white';
+                ui.resultText.innerText = 'TIE GAME'; ui.resultText.setAttribute('data-text', 'TIE GAME'); ui.resultText.style.color = 'white';
             } else if (player1.health > player2.health) {
-                ui.resultText.innerText = 'P1 BLOK WINS';
-                ui.resultText.style.color = 'var(--neon-blue)';
+                ui.resultText.innerText = 'P1 BLOK WINS'; ui.resultText.setAttribute('data-text', 'P1 BLOK WINS'); ui.resultText.style.color = 'var(--neon-blue)';
             } else if (player2.health > player1.health) {
-                ui.resultText.innerText = 'P2 CYBR WINS';
-                ui.resultText.style.color = 'var(--neon-pink)';
+                ui.resultText.innerText = 'P2 CYBR WINS'; ui.resultText.setAttribute('data-text', 'P2 CYBR WINS'); ui.resultText.style.color = 'var(--neon-pink)';
             }
         }
 
-        // Fungsi baru untuk ke layar pemilihan karakter
         function goToCharSelect() {
-            screens.start.classList.add('hidden');
-            screens.over.classList.add('hidden');
-            screens.select.classList.remove('hidden');
+            screens.start.classList.add('hidden'); screens.over.classList.add('hidden'); screens.select.classList.remove('hidden');
         }
 
         function startGame() {
-            screens.select.classList.add('hidden');
-            screens.over.classList.add('hidden');
-            screens.game.classList.remove('hidden');
-            
-            initGame();
-            gameState = 'playing';
-            lastTime = performance.now();
-            
+            screens.select.classList.add('hidden'); screens.over.classList.add('hidden'); screens.game.classList.remove('hidden');
+            initGame(); gameState = 'playing'; lastTime = performance.now();
             if (timerInterval) clearInterval(timerInterval);
             timerInterval = setInterval(decreaseTimer, 1000);
-            
             animate(lastTime);
         }
 
-        // Event Listeners for UI - Diubah alurnya
         document.getElementById('btn-to-select').addEventListener('click', goToCharSelect);
         document.getElementById('btn-start-game').addEventListener('click', startGame);
         document.getElementById('btn-restart').addEventListener('click', goToCharSelect);

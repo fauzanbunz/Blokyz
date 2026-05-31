@@ -655,15 +655,9 @@
                     particles.spawnPower(startX, this.position.y + 60, powerParticleColor, dir); 
                     
                     this.stateTimer = 800; 
-
-                    let shakeInterval = setInterval(() => {
-                        if(this.state !== 'power' || !this.attackBox.active) {
-                            clearInterval(shakeInterval);
-                            canvas.style.transform = 'translate(0,0)';
-                            return;
-                        }
-                        canvas.style.transform = `translate(${(Math.random()-0.5)*20}px, ${(Math.random()-0.5)*20}px)`;
-                    }, 40);
+                    
+                    // Efek shaking monitor saat power telah dihapus sepenuhnya
+                    canvas.style.transform = 'translate(0,0)';
                 }
 
                 if (this.stateTimer > 0) {

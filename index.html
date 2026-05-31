@@ -46,7 +46,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            animation: container-glitch 4s infinite;
+            /* Shaking monitor (container-glitch) telah dihapus dari sini */
         }
 
         /* --- EFEK TV RUSAK & GLITCH BACKGROUND --- */
@@ -92,15 +92,6 @@
             z-index: 1; /* Di bawah game canvas */
             pointer-events: none;
             opacity: 0.6; /* Transparansi agar tidak terlalu menyilaukan */
-        }
-
-        /* 4. Layar Bergetar Acak (Glitch Keseluruhan Layar) */
-        @keyframes container-glitch {
-            0% { transform: translate(0, 0) scale(1); filter: hue-rotate(0deg); }
-            2% { transform: translate(2px, -2px) scale(1.01); filter: hue-rotate(15deg); }
-            4% { transform: translate(-2px, 2px) scale(1); filter: hue-rotate(-15deg); }
-            6% { transform: translate(0, 0) scale(1); filter: hue-rotate(0deg); }
-            100% { transform: translate(0, 0) scale(1); filter: hue-rotate(0deg); }
         }
 
         canvas {
@@ -373,6 +364,7 @@
             <button id="btn-restart" class="btn-neon btn-start">REMATCH</button>
         </div>
 
+        <!-- Kanvas Permainan Utama -->
         <canvas id="gameCanvas"></canvas>
         <canvas id="particles"></canvas>
     </div>
@@ -523,18 +515,15 @@
         class Fighter {
             constructor({position, velocity, color, name, isPlayer1, spriteConfig, spriteSize}) {
                 this.position = position; this.velocity = velocity;
-                // Ukuran diperbesar 2x lipat (sebelumnya 90x90)
+                // Ukuran diperbesar 2x lipat
                 this.width = 180; this.height = 180;
                 this.color = color; this.name = name;
                 this.isPlayer1 = isPlayer1; this.facingRight = isPlayer1;
                 this.health = MAX_HEALTH; this.spirit = 0; this.isDead = false;
                 this.state = 'idle'; this.stateTimer = 0;
-                this.powerLaserFired = false; // Flag khusus sinkronisasi laser
+                this.powerLaserFired = false; 
                 
-                // Ukuran bawaan sprite frame (90 untuk P1, 64 untuk P2)
                 this.spriteSize = spriteSize;
-                
-                // Konfigurasi disuntik dari luar (mendukung karakter berbeda)
                 this.sprites = spriteConfig;
 
                 for (const key in this.sprites) {
@@ -553,7 +542,7 @@
             switchState(newState) {
                 if (this.state === newState) return;
                 this.state = newState; this.currentFrame = 0; this.framesElapsed = 0;
-                this.powerLaserFired = false; // Reset status pelacakan laser
+                this.powerLaserFired = false; // Reset pelacakan laser saat state ganti
 
                 switch (newState) {
                     case 'idle': this.currentSprite = this.sprites.idle; this.framesHold = 4; break;
@@ -579,7 +568,7 @@
                 if (this.state !== 'dead') {
                     this.framesElapsed++;
                     if (this.framesElapsed % this.framesHold === 0) {
-                        // Tambahkan 'power' ke dalam pengecekan agar frame berhenti (freeze) di frame terakhir
+                        // Tahan animasi di frame terakhir untuk serangan (terutama 'power')
                         if (['punch', 'kick', 'power'].includes(this.state)) {
                             if (this.currentFrame < this.currentSprite.frames - 1) this.currentFrame++;
                         } else {
@@ -598,7 +587,6 @@
                     ctx.shadowBlur = 40; 
                 }
 
-                // Filter warna hanya untuk Player 2 agar warna P1 yang baru tidak berubah
                 let currentFilter = 'none'; 
                 if (!this.isPlayer1) currentFilter = 'hue-rotate(240deg) brightness(40%)';
                 
@@ -607,7 +595,6 @@
                 }
                 ctx.filter = currentFilter;
 
-                // Gunakan this.spriteSize agar crop frame sesuai dengan ukuran asal (90px vs 64px)
                 ctx.drawImage(
                     this.currentSprite.img, this.currentFrame * this.spriteSize, 0, this.spriteSize, this.spriteSize,
                     drawX, drawY, this.width, this.height             
@@ -617,8 +604,8 @@
 
                 // --- RENDER SINAR LASER DARI WAJAH KESELURUH ARENA ---
                 if (this.state === 'power' && this.attackBox.active) {
-                    let beamY = -this.height / 2 + 60; // Tinggi wajah/mata dari titik tengah
-                    let beamHeight = 40 + Math.random() * 30; // Efek bergetar/flicker tinggi laser
+                    let beamY = -this.height / 2 + 60; 
+                    let beamHeight = 40 + Math.random() * 30; 
 
                     let powerColor = '#00f3ff'; 
 
@@ -651,10 +638,9 @@
 
                 this.position.x += this.velocity.x;
 
-                // --- LOGIKA SINKRONISASI LASER POWER ---
-                // Mengecek apakah animasi sedang power dan SUDAH mencapai frame terakhir (freeze)
+                // --- LOGIKA SINKRONISASI LASER POWER (FREEZE FRAME 13) ---
                 if (this.state === 'power' && !this.powerLaserFired && this.currentFrame === this.currentSprite.frames - 1) {
-                    this.powerLaserFired = true; // Tandai bahwa laser sudah tertembak
+                    this.powerLaserFired = true; 
 
                     this.attackBox.width = 1200; 
                     this.attackBox.height = 60;
@@ -668,7 +654,6 @@
                     let powerParticleColor = Math.random() > 0.5 ? '#00f3ff' : 'white';
                     particles.spawnPower(startX, this.position.y + 60, powerParticleColor, dir); 
                     
-                    // Reset timer ke 800ms. Ini berarti laser dan karakter akan freeze selama 800ms sebelum kembali idle
                     this.stateTimer = 800; 
 
                     let shakeInterval = setInterval(() => {
@@ -721,13 +706,10 @@
             }
 
             powerMove() {
-                // if (this.spirit < MAX_SPIRIT) return; // Mode Uji Coba: Nonaktif
                 if (['punch', 'kick', 'power', 'hit'].includes(this.state)) return;
-                
                 this.switchState('power'); 
                 
-                // Atur timer sementara yang cukup panjang. Nilai timer ini akan di-override
-                // menjadi 800ms oleh logika di dalam update() setelah mencapai frame terakhir.
+                // Menunggu frame freeze tercapai (diatur oleh logika update)
                 this.stateTimer = 5000; 
             }
 
@@ -769,7 +751,6 @@
             }
         }
 
-        // Konfigurasi Sprite untuk masing-masing karakter
         const p1SpritesConfig = {
             idle: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_idle.png', frames: 9 },
             walk: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_walk.png', frames: 9 },
@@ -785,7 +766,7 @@
             jump: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/jumpy.png', frames: 6 },
             punch: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/punch.png', frames: 13 },
             kick: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/kick.png', frames: 17 },
-            power: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png', frames: 17 } // P2 fallback
+            power: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png', frames: 17 }
         };
 
         let player1; let player2;
@@ -797,7 +778,6 @@
                 spriteConfig: p1SpritesConfig, spriteSize: 90
             });
             player2 = new Fighter({
-                // Posisi awal dimundurkan lebih banyak agar badan yang besar tidak keluar frame
                 position: { x: canvas.width - 330, y: 0 }, velocity: { x: 0, y: 0 },
                 color: 'var(--neon-pink)', name: 'P2', isPlayer1: false,
                 spriteConfig: p2SpritesConfig, spriteSize: 64
@@ -828,7 +808,6 @@
 
             animationId = requestAnimationFrame(animate);
 
-            // Bersihkan kanvas agar transparan, melihat ke efek background container
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             // Lantai Game (Grid Biru Neon)
@@ -887,16 +866,12 @@
 
             // Tabrakan (Hit Detection)
             if (player1.attackBox.active && rectangularCollision({ rectangle1: player1.attackBox, rectangle2: player2 }) && player2.state !== 'hit' && !player2.isDead) {
-                // Jangan nonaktifkan hitbox jika ini adalah serangan POWER (Laser)
                 if (player1.state !== 'power') player1.attackBox.active = false; 
-                
                 player2.takeHit(player1.attackBox.damage); 
                 player1.addSpirit(player1.attackBox.spiritGain);
             }
             if (player2.attackBox.active && rectangularCollision({ rectangle1: player2.attackBox, rectangle2: player1 }) && player1.state !== 'hit' && !player1.isDead) {
-                // Jangan nonaktifkan hitbox jika ini adalah serangan POWER (Laser)
                 if (player2.state !== 'power') player2.attackBox.active = false; 
-                
                 player1.takeHit(player2.attackBox.damage); 
                 player2.addSpirit(player2.attackBox.spiritGain);
             }

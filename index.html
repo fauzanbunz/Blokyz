@@ -270,7 +270,7 @@
 <body>
 
     <div id="game-container">
-        <!-- Audio Background Music -->
+        <!-- Audio Background Music (Volume Rendah 30%) -->
         <audio id="bgMusic" loop>
             <source src="https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/Castle%20of%20Ashes.mp3" type="audio/mpeg">
         </audio>
@@ -379,6 +379,10 @@
         // BGM Setup
         const bgMusic = document.getElementById('bgMusic');
         bgMusic.volume = 0.3; // Volume 30%
+
+        // Arena Background Image Setup
+        const arenaBg = new Image();
+        arenaBg.src = 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/sdsdsdsdsds.png';
 
         // Matrix Rain Setup
         const mFontSize = 14;
@@ -519,7 +523,8 @@
         class Fighter {
             constructor({position, velocity, color, name, isPlayer1, spriteConfig, spriteSize}) {
                 this.position = position; this.velocity = velocity;
-                this.width = 180; this.height = 180;
+                // UKURAN KARAKTER DIPERBESAR 2X LIPAT DI ARENA (360x360)
+                this.width = 360; this.height = 360;
                 this.color = color; this.name = name;
                 this.isPlayer1 = isPlayer1; this.facingRight = isPlayer1;
                 this.health = MAX_HEALTH; this.spirit = 0; this.isDead = false;
@@ -602,7 +607,8 @@
                 ctx.filter = 'none';
 
                 if (this.state === 'power' && this.attackBox.active) {
-                    let baseBeamY = this.isPlayer1 ? 60 : 40; 
+                    // P1 laser di dada/wajah (120), P2 lebih rendah (80)
+                    let baseBeamY = this.isPlayer1 ? 120 : 80; 
                     let beamY = -this.height / 2 + baseBeamY; 
                     let beamHeight = 40 + Math.random() * 30; 
                     
@@ -650,7 +656,7 @@
                     let startX = this.position.x + this.width / 2;
                     
                     let powerParticleColor = this.isPlayer1 ? (Math.random() > 0.5 ? '#00f3ff' : 'white') : (Math.random() > 0.5 ? '#ff00ff' : 'white');
-                    let particleStartY = this.isPlayer1 ? this.position.y + 60 : this.position.y + 40;
+                    let particleStartY = this.isPlayer1 ? this.position.y + 120 : this.position.y + 80;
                     
                     particles.spawnPower(startX, particleStartY, powerParticleColor, dir); 
                     
@@ -673,7 +679,8 @@
                     }
                     
                     if (this.state === 'power') { 
-                        let hitboxOffsetY = this.isPlayer1 ? 30 : 10;
+                        // Menyesuaikan hitbox Y agar pas dengan tinggi laser
+                        let hitboxOffsetY = this.isPlayer1 ? 90 : 50;
                         this.attackBox.position.y = this.position.y + hitboxOffsetY; 
                     } else { 
                         this.attackBox.position.y = this.position.y + this.height / 4; 
@@ -684,7 +691,8 @@
             punch() {
                 if (['punch', 'kick', 'power', 'hit'].includes(this.state)) return;
                 this.switchState('punch'); this.stateTimer = 400;
-                this.attackBox.width = 120; this.attackBox.height = 80; this.attackBox.damage = 5; this.attackBox.spiritGain = 10;
+                // Area serangan diperbesar
+                this.attackBox.width = 240; this.attackBox.height = 160; this.attackBox.damage = 5; this.attackBox.spiritGain = 10;
                 setTimeout(() => { if(this.state === 'punch') this.attackBox.active = true; }, 150);
                 setTimeout(() => { this.attackBox.active = false; }, 250);
             }
@@ -692,7 +700,8 @@
             kick() {
                 if (['punch', 'kick', 'power', 'hit'].includes(this.state)) return;
                 this.switchState('kick'); this.stateTimer = 500;
-                this.attackBox.width = 160; this.attackBox.height = 60; this.attackBox.damage = 8; this.attackBox.spiritGain = 15;
+                // Area serangan diperbesar
+                this.attackBox.width = 320; this.attackBox.height = 120; this.attackBox.damage = 8; this.attackBox.spiritGain = 15;
                 setTimeout(() => { if(this.state === 'kick') this.attackBox.active = true; }, 200);
                 setTimeout(() => { this.attackBox.active = false; }, 350);
             }
@@ -765,12 +774,13 @@
 
         function initGame() {
             player1 = new Fighter({
-                position: { x: 150, y: 0 }, velocity: { x: 0, y: 0 },
+                position: { x: 50, y: 0 }, velocity: { x: 0, y: 0 },
                 color: 'var(--neon-blue)', name: 'P1', isPlayer1: true,
                 spriteConfig: p1SpritesConfig, spriteSize: 90
             });
             player2 = new Fighter({
-                position: { x: canvas.width - 330, y: 0 }, velocity: { x: 0, y: 0 },
+                // Posisi disesuaikan agar badan besar tidak melewati batas awal frame
+                position: { x: canvas.width - 410, y: 0 }, velocity: { x: 0, y: 0 },
                 color: 'var(--neon-pink)', name: 'P2', isPlayer1: false,
                 spriteConfig: p2SpritesConfig, spriteSize: 90
             });
@@ -808,6 +818,13 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // GANTI LATAR BELAKANG ARENA PERTARUNGAN DENGAN GAMBAR
+            if (arenaBg.complete) {
+                ctx.globalAlpha = 0.5; // Menggelapkan background agar pemain & UI tetap terlihat jelas
+                ctx.drawImage(arenaBg, 0, 0, canvas.width, canvas.height);
+                ctx.globalAlpha = 1.0;
+            }
+
             ctx.strokeStyle = 'rgba(0, 243, 255, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -818,13 +835,14 @@
                 ctx.moveTo(canvas.width/2, floorY - 50); ctx.lineTo(i * 150, canvas.height); ctx.stroke();
             }
 
+            // Kecepatan & Lompatan disesuaikan dengan ukuran yang 2x lebih besar
             player1.velocity.x = 0; const floorP1 = canvas.height - FLOOR_OFFSET - player1.height;
             if (gameState === 'playing' && !['hit', 'power', 'win'].includes(player1.state) && !player1.isDead) {
                 let isMovingP1 = false;
-                if (keys.a.pressed && player1.position.x > 0) { player1.velocity.x = -5; isMovingP1 = true; } 
-                else if (keys.d.pressed && player1.position.x < canvas.width - player1.width) { player1.velocity.x = 5; isMovingP1 = true; }
+                if (keys.a.pressed && player1.position.x > 0) { player1.velocity.x = -8; isMovingP1 = true; } 
+                else if (keys.d.pressed && player1.position.x < canvas.width - player1.width) { player1.velocity.x = 8; isMovingP1 = true; }
                 if (['punch', 'kick'].includes(player1.state) && player1.position.y >= floorP1) player1.velocity.x = 0; 
-                if (keys.w.pressed && player1.position.y >= floorP1 && !['punch', 'kick'].includes(player1.state)) player1.velocity.y = -15;
+                if (keys.w.pressed && player1.position.y >= floorP1 && !['punch', 'kick'].includes(player1.state)) player1.velocity.y = -20;
 
                 if (!['punch', 'kick'].includes(player1.state)) {
                     if (keys.f.pressed) player1.punch(); else if (keys.g.pressed) player1.kick(); else if (keys.h.pressed) player1.powerMove();
@@ -839,10 +857,10 @@
             player2.velocity.x = 0; const floorP2 = canvas.height - FLOOR_OFFSET - player2.height;
             if (gameState === 'playing' && !['hit', 'power', 'win'].includes(player2.state) && !player2.isDead) {
                 let isMovingP2 = false;
-                if (keys.ArrowLeft.pressed && player2.position.x > 0) { player2.velocity.x = -5; isMovingP2 = true; } 
-                else if (keys.ArrowRight.pressed && player2.position.x < canvas.width - player2.width) { player2.velocity.x = 5; isMovingP2 = true; }
+                if (keys.ArrowLeft.pressed && player2.position.x > 0) { player2.velocity.x = -8; isMovingP2 = true; } 
+                else if (keys.ArrowRight.pressed && player2.position.x < canvas.width - player2.width) { player2.velocity.x = 8; isMovingP2 = true; }
                 if (['punch', 'kick'].includes(player2.state) && player2.position.y >= floorP2) player2.velocity.x = 0;
-                if (keys.ArrowUp.pressed && player2.position.y >= floorP2 && !['punch', 'kick'].includes(player2.state)) player2.velocity.y = -15;
+                if (keys.ArrowUp.pressed && player2.position.y >= floorP2 && !['punch', 'kick'].includes(player2.state)) player2.velocity.y = -20;
 
                 if (!['punch', 'kick'].includes(player2.state)) {
                     if (keys.k.pressed) player2.punch(); else if (keys.l.pressed) player2.kick(); else if (keys[';'].pressed) player2.powerMove();

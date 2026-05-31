@@ -8,7 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts for pixel look -->
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    
     <style>
         /* Mengambil Font Custom NEMESYS dari Github */
         @font-face {
@@ -24,7 +23,7 @@
 
         body {
             font-family: 'Press Start 2P', monospace;
-            background-color: #020205; /* Lebih gelap untuk efek TV */
+            background-color: #020205; 
             color: white;
             overflow: hidden;
             margin: 0;
@@ -47,7 +46,6 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            /* Shaking dihapus, layar tenang */
         }
 
         /* --- EFEK TV RUSAK & GLITCH BACKGROUND --- */
@@ -90,9 +88,9 @@
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            z-index: 1; /* Di bawah game canvas */
+            z-index: 1; 
             pointer-events: none;
-            opacity: 0.6; /* Transparansi agar tidak terlalu menyilaukan */
+            opacity: 0.6; 
         }
 
         canvas {
@@ -170,7 +168,6 @@
             z-index: 20;
         }
 
-        /* Pseudo-elements untuk memotong (clip) dan menggeser teks */
         .title-text::before, .title-text::after {
             content: attr(data-text);
             position: absolute;
@@ -262,11 +259,8 @@
             transform: scale(2); image-rendering: pixelated;
         }
 
-        /* Hilangkan filter brightness/hue-rotate karena sudah pakai sprite asli C_idle */
-        .p2-box .sprite-idle-p2 { filter: drop-shadow(0 0 5px var(--neon-pink)); }
-
         @keyframes play-sprite-p1 { 100% { background-position: -810px; } }
-        @keyframes play-sprite-p2 { 100% { background-position: -810px; } } /* C_idle punya 9 frame juga, jadi -810px (9x90) */
+        @keyframes play-sprite-p2 { 100% { background-position: -810px; } } 
 
         #particles {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15;
@@ -276,6 +270,11 @@
 <body>
 
     <div id="game-container">
+        <!-- Audio Background Music -->
+        <audio id="bgMusic" loop>
+            <source src="https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/Castle%20of%20Ashes.mp3" type="audio/mpeg">
+        </audio>
+
         <!-- Komponen Efek Background -->
         <canvas id="matrixCanvas"></canvas>
         <div class="scanline-roll"></div>
@@ -377,6 +376,10 @@
         const matrixCanvas = document.getElementById('matrixCanvas');
         const mCtx = matrixCanvas.getContext('2d');
 
+        // BGM Setup
+        const bgMusic = document.getElementById('bgMusic');
+        bgMusic.volume = 0.3; // Volume 30%
+
         // Matrix Rain Setup
         const mFontSize = 14;
         let mColumns, mDrops = [];
@@ -398,7 +401,7 @@
             
             for (let i = 0; i < mDrops.length; i++) {
                 const text = Math.floor(Math.random() * 10).toString(); 
-                mCtx.fillStyle = Math.random() > 0.5 ? '#00f3ff' : '#ff00ff'; // Cyan & Pink
+                mCtx.fillStyle = Math.random() > 0.5 ? '#00f3ff' : '#ff00ff'; 
                 mCtx.fillText(text, i * mFontSize, mDrops[i] * mFontSize);
                 
                 if (mDrops[i] * mFontSize > matrixCanvas.height && Math.random() > 0.975) {
@@ -455,7 +458,7 @@
         };
 
         window.addEventListener('keydown', (e) => {
-            if (gameState !== 'playing') return; // Memblokir input saat animasi layar menang/zoom
+            if (gameState !== 'playing') return; 
             if (keys[e.key]) keys[e.key].pressed = true;
             if (e.code === 'Space') keys['h'].pressed = true;
         });
@@ -569,7 +572,6 @@
                 if (this.state !== 'dead') {
                     this.framesElapsed++;
                     if (this.framesElapsed % this.framesHold === 0) {
-                        // Freeze frame untuk animasi serangan dan kemenangan
                         if (['punch', 'kick', 'power', 'win'].includes(this.state)) {
                             if (this.currentFrame < this.currentSprite.frames - 1) this.currentFrame++;
                         } else {
@@ -588,26 +590,22 @@
                     ctx.shadowBlur = 40; 
                 }
 
-                // Filter warna dihapus karena P2 kini memiliki sprite asli miliknya sendiri
-                let currentFilter = 'none'; 
-                if (this.state === 'hit') {
-                    currentFilter = 'brightness(200%)';
-                }
-                ctx.filter = currentFilter;
+                ctx.filter = this.state === 'hit' ? 'brightness(200%)' : 'none';
+
+                let spriteXOffset = 0; let spriteYOffset = 0;
 
                 ctx.drawImage(
                     this.currentSprite.img, this.currentFrame * this.spriteSize, 0, this.spriteSize, this.spriteSize,
-                    drawX, drawY, this.width, this.height             
+                    drawX + spriteXOffset, drawY + spriteYOffset, this.width, this.height             
                 );
 
                 ctx.filter = 'none';
 
-                // --- RENDER SINAR LASER DARI WAJAH KESELURUH ARENA ---
                 if (this.state === 'power' && this.attackBox.active) {
-                    let beamY = -this.height / 2 + 60; 
+                    let baseBeamY = this.isPlayer1 ? 60 : 40; 
+                    let beamY = -this.height / 2 + baseBeamY; 
                     let beamHeight = 40 + Math.random() * 30; 
                     
-                    // P1: Cyan/Biru Neon, P2: Pink/Magenta (sesuai request api ungu/pink)
                     let powerColor = this.isPlayer1 ? '#00f3ff' : '#ff00ff'; 
 
                     ctx.shadowBlur = 40; 
@@ -616,13 +614,11 @@
                     
                     ctx.fillRect(0, beamY - beamHeight / 2, 1200, beamHeight); 
                     
-                    // Core putih terang di tengah laser
                     ctx.fillStyle = 'white';
                     ctx.shadowBlur = 20;
                     ctx.shadowColor = 'white';
                     ctx.fillRect(0, beamY - beamHeight / 4, 1200, beamHeight / 2);
                     
-                    // Efek statik di dalam sinar
                     ctx.fillStyle = Math.random() > 0.5 ? 'white' : powerColor;
                     ctx.fillRect(Math.random() * 600, beamY - 5, Math.random() * 300, 10);
                 }
@@ -641,7 +637,6 @@
 
                 this.position.x += this.velocity.x;
 
-                // Laser menembak saat mencapai frame terakhir
                 if (this.state === 'power' && !this.powerLaserFired && this.currentFrame === this.currentSprite.frames - 1) {
                     this.powerLaserFired = true; 
 
@@ -654,9 +649,10 @@
                     let dir = this.facingRight ? 1 : -1;
                     let startX = this.position.x + this.width / 2;
                     
-                    // Partikel P1 (Biru/Putih), Partikel P2 (Pink/Putih)
                     let powerParticleColor = this.isPlayer1 ? (Math.random() > 0.5 ? '#00f3ff' : 'white') : (Math.random() > 0.5 ? '#ff00ff' : 'white');
-                    particles.spawnPower(startX, this.position.y + 60, powerParticleColor, dir); 
+                    let particleStartY = this.isPlayer1 ? this.position.y + 60 : this.position.y + 40;
+                    
+                    particles.spawnPower(startX, particleStartY, powerParticleColor, dir); 
                     
                     this.stateTimer = 800; 
                 }
@@ -677,7 +673,8 @@
                     }
                     
                     if (this.state === 'power') { 
-                        this.attackBox.position.y = this.position.y + 30; 
+                        let hitboxOffsetY = this.isPlayer1 ? 30 : 10;
+                        this.attackBox.position.y = this.position.y + hitboxOffsetY; 
                     } else { 
                         this.attackBox.position.y = this.position.y + this.height / 4; 
                     }
@@ -702,9 +699,8 @@
 
             powerMove() {
                 if (['punch', 'kick', 'power', 'hit'].includes(this.state)) return;
-                
                 this.switchState('power'); 
-                this.stateTimer = 5000; // Akan di-override saat mencapai frame terakhir
+                this.stateTimer = 5000; 
             }
 
             takeHit(damage) {
@@ -760,7 +756,7 @@
             walk: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C-walk.png', frames: 9 },
             jump: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_jump.png', frames: 2 },
             punch: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_punch.png', frames: 9 },
-            kick: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_kick.png', frames: 9 },
+            kick: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_kick.png', frames: 9 }, 
             power: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_power.png', frames: 11 }, 
             win: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_winner.png', frames: 9 } 
         };
@@ -781,12 +777,11 @@
 
             timer = GAME_DURATION; ui.timer.innerText = timer;
             [player1, player2].forEach(p => {
-                p.health = MAX_HEALTH; p.spirit = MAX_SPIRIT; // Spirit disetel Max untuk tes Power
+                p.health = MAX_HEALTH; p.spirit = MAX_SPIRIT; 
                 p.updateHealthBar(); p.updateSpiritBar();
             });
             particles.particles = [];
             
-            // RESET ZOOM KAMERA SETIAP RESTART MATCH
             [canvas, particleCanvas].forEach(c => {
                 c.style.transition = 'none';
                 c.style.transform = 'scale(1)';
@@ -804,7 +799,6 @@
         }
 
         function animate(timestamp) {
-            // Animasi TETAP BERJALAN saat 'over' (Game Over) agar bisa render Zoom & Pose Kemenangan
             if (gameState === 'start' || gameState === 'select') return;
 
             const deltaTime = timestamp - lastTime;
@@ -814,7 +808,6 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Lantai Game
             ctx.strokeStyle = 'rgba(0, 243, 255, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -825,7 +818,6 @@
                 ctx.moveTo(canvas.width/2, floorY - 50); ctx.lineTo(i * 150, canvas.height); ctx.stroke();
             }
 
-            // Logic Player 1
             player1.velocity.x = 0; const floorP1 = canvas.height - FLOOR_OFFSET - player1.height;
             if (gameState === 'playing' && !['hit', 'power', 'win'].includes(player1.state) && !player1.isDead) {
                 let isMovingP1 = false;
@@ -844,7 +836,6 @@
                 }
             }
 
-            // Logic Player 2
             player2.velocity.x = 0; const floorP2 = canvas.height - FLOOR_OFFSET - player2.height;
             if (gameState === 'playing' && !['hit', 'power', 'win'].includes(player2.state) && !player2.isDead) {
                 let isMovingP2 = false;
@@ -867,7 +858,6 @@
             player1.draw(); player2.draw();
             particles.updateAndDraw(pCtx);
 
-            // Tabrakan & Hit Detection
             if (gameState === 'playing') {
                 if (player1.attackBox.active && rectangularCollision({ rectangle1: player1.attackBox, rectangle2: player2 }) && player2.state !== 'hit' && !player2.isDead) {
                     if (player1.state !== 'power') player1.attackBox.active = false; 
@@ -909,7 +899,6 @@
                 ui.resultText.innerText = 'P2 CYBR WINS'; ui.resultText.setAttribute('data-text', 'P2 CYBR WINS'); ui.resultText.style.color = 'var(--neon-pink)';
             }
 
-            // KAMERA ZOOM-IN EFEK EKSKLUSIF KE PEMENANG
             if (winner) {
                 let winCenterX = winner.position.x + winner.width / 2;
                 let winCenterY = winner.position.y + winner.height / 2;
@@ -930,6 +919,9 @@
 
         function goToCharSelect() {
             screens.start.classList.add('hidden'); screens.over.classList.add('hidden'); screens.select.classList.remove('hidden');
+            
+            // Mainkan audio jika belum berputar
+            bgMusic.play().catch(err => console.log("Menunggu interaksi pengguna untuk audio..."));
         }
 
         function startGame() {

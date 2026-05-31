@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts for pixel look -->
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
     <style>
         /* Mengambil Font Custom NEMESYS dari Github */
         @font-face {
@@ -46,7 +47,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            /* Shaking monitor (container-glitch) telah dihapus dari sini */
+            /* Shaking dihapus, layar tenang */
         }
 
         /* --- EFEK TV RUSAK & GLITCH BACKGROUND --- */
@@ -253,18 +254,19 @@
             transform: scale(2); image-rendering: pixelated;
         }
         
-        /* Sprite Player 2 (idle bawaan, 64px width, 17 frames) */
+        /* Sprite Player 2 (C_idle, 90px width, 9 frames) */
         .sprite-idle-p2 {
-            width: 64px; height: 64px; 
-            background: url('https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png') left center;
-            animation: play-sprite-p2 1s steps(17) infinite; 
-            transform: scale(3); image-rendering: pixelated;
+            width: 90px; height: 90px; 
+            background: url('https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_idle.png') left center;
+            animation: play-sprite-p2 1s steps(9) infinite; 
+            transform: scale(2); image-rendering: pixelated;
         }
 
-        .p2-box .sprite-idle-p2 { filter: drop-shadow(0 0 5px var(--neon-pink)) hue-rotate(240deg) brightness(40%); }
+        /* Hilangkan filter brightness/hue-rotate karena sudah pakai sprite asli C_idle */
+        .p2-box .sprite-idle-p2 { filter: drop-shadow(0 0 5px var(--neon-pink)); }
 
         @keyframes play-sprite-p1 { 100% { background-position: -810px; } }
-        @keyframes play-sprite-p2 { 100% { background-position: -1088px; } }
+        @keyframes play-sprite-p2 { 100% { background-position: -810px; } } /* C_idle punya 9 frame juga, jadi -810px (9x90) */
 
         #particles {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15;
@@ -305,7 +307,6 @@
 
         <!-- Start Screen -->
         <div id="start-screen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-transparent">
-            <!-- Tambahkan data-text agar efek glitch CSS bekerja -->
             <h1 class="title-text" data-text="RUMBLOK">RUMBLOK</h1>
             <button id="btn-to-select" class="btn-neon btn-start">START BATTLE</button>
             
@@ -349,7 +350,7 @@
                 <div class="flex flex-col items-center">
                     <h3 class="text-neon-pink text-lg mb-4 tracking-widest leading-relaxed">P2 CYBR</h3>
                     <div class="char-preview-box p2-box">
-                        <div class="sprite-idle-p2" style="transform: scale(-3, 3);"></div>
+                        <div class="sprite-idle-p2" style="transform: scale(-2, 2);"></div>
                     </div>
                     <p class="text-gray-400 mt-2 text-xs">Ready</p>
                 </div>
@@ -359,12 +360,11 @@
         </div>
 
         <!-- Game Over Screen -->
-        <div id="game-over-screen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-black/80 backdrop-blur-sm hidden">
+        <div id="game-over-screen" class="absolute inset-0 flex flex-col items-center justify-center z-50 bg-black/50 backdrop-blur-sm hidden transition-opacity duration-1000">
             <h2 id="result-text" class="text-white" data-text="TIME OVER">TIME OVER</h2>
-            <button id="btn-restart" class="btn-neon btn-start">REMATCH</button>
+            <button id="btn-restart" class="btn-neon btn-start mt-8">REMATCH</button>
         </div>
 
-        <!-- Kanvas Permainan Utama -->
         <canvas id="gameCanvas"></canvas>
         <canvas id="particles"></canvas>
     </div>
@@ -398,7 +398,7 @@
             
             for (let i = 0; i < mDrops.length; i++) {
                 const text = Math.floor(Math.random() * 10).toString(); 
-                mCtx.fillStyle = Math.random() > 0.5 ? '#00f3ff' : '#b829ff'; 
+                mCtx.fillStyle = Math.random() > 0.5 ? '#00f3ff' : '#ff00ff'; // Cyan & Pink
                 mCtx.fillText(text, i * mFontSize, mDrops[i] * mFontSize);
                 
                 if (mDrops[i] * mFontSize > matrixCanvas.height && Math.random() > 0.975) {
@@ -441,7 +441,7 @@
             resultText: document.getElementById('result-text')
         };
 
-        let gameState = 'start';
+        let gameState = 'start'; // start, select, playing, over
         let timer = GAME_DURATION;
         let timerInterval;
         let animationId;
@@ -455,6 +455,7 @@
         };
 
         window.addEventListener('keydown', (e) => {
+            if (gameState !== 'playing') return; // Memblokir input saat animasi layar menang/zoom
             if (keys[e.key]) keys[e.key].pressed = true;
             if (e.code === 'Space') keys['h'].pressed = true;
         });
@@ -515,7 +516,6 @@
         class Fighter {
             constructor({position, velocity, color, name, isPlayer1, spriteConfig, spriteSize}) {
                 this.position = position; this.velocity = velocity;
-                // Ukuran diperbesar 2x lipat
                 this.width = 180; this.height = 180;
                 this.color = color; this.name = name;
                 this.isPlayer1 = isPlayer1; this.facingRight = isPlayer1;
@@ -542,7 +542,7 @@
             switchState(newState) {
                 if (this.state === newState) return;
                 this.state = newState; this.currentFrame = 0; this.framesElapsed = 0;
-                this.powerLaserFired = false; // Reset pelacakan laser saat state ganti
+                this.powerLaserFired = false;
 
                 switch (newState) {
                     case 'idle': this.currentSprite = this.sprites.idle; this.framesHold = 4; break;
@@ -552,13 +552,14 @@
                     case 'kick': this.currentSprite = this.sprites.kick; this.framesHold = 3; break; 
                     case 'hit': this.currentSprite = this.sprites.idle; this.framesHold = 4; break; 
                     case 'power': this.currentSprite = this.sprites.power; this.framesHold = 3; break; 
+                    case 'win': this.currentSprite = this.sprites.win; this.framesHold = 6; break; 
                 }
             }
 
             draw() {
                 if (this.state !== 'dead') {
                      let opponent = this.isPlayer1 ? player2 : player1;
-                     if (opponent) this.facingRight = this.position.x < opponent.position.x;
+                     if (opponent && gameState === 'playing') this.facingRight = this.position.x < opponent.position.x;
                 }
 
                 ctx.save();
@@ -568,8 +569,8 @@
                 if (this.state !== 'dead') {
                     this.framesElapsed++;
                     if (this.framesElapsed % this.framesHold === 0) {
-                        // Tahan animasi di frame terakhir untuk serangan (terutama 'power')
-                        if (['punch', 'kick', 'power'].includes(this.state)) {
+                        // Freeze frame untuk animasi serangan dan kemenangan
+                        if (['punch', 'kick', 'power', 'win'].includes(this.state)) {
                             if (this.currentFrame < this.currentSprite.frames - 1) this.currentFrame++;
                         } else {
                             this.currentFrame = (this.currentFrame + 1) % this.currentSprite.frames;
@@ -583,15 +584,14 @@
                 let drawX = -this.width / 2; let drawY = -this.height / 2;
                 
                 if (this.state === 'hit') { ctx.translate(-10, 0); ctx.rotate(-0.2); } 
-                else if (this.state === 'power') {
+                else if (this.state === 'power' || this.state === 'win') {
                     ctx.shadowBlur = 40; 
                 }
 
+                // Filter warna dihapus karena P2 kini memiliki sprite asli miliknya sendiri
                 let currentFilter = 'none'; 
-                if (!this.isPlayer1) currentFilter = 'hue-rotate(240deg) brightness(40%)';
-                
                 if (this.state === 'hit') {
-                    currentFilter = currentFilter !== 'none' ? currentFilter + ' brightness(200%)' : 'brightness(200%)';
+                    currentFilter = 'brightness(200%)';
                 }
                 ctx.filter = currentFilter;
 
@@ -606,8 +606,9 @@
                 if (this.state === 'power' && this.attackBox.active) {
                     let beamY = -this.height / 2 + 60; 
                     let beamHeight = 40 + Math.random() * 30; 
-
-                    let powerColor = '#00f3ff'; 
+                    
+                    // P1: Cyan/Biru Neon, P2: Pink/Magenta (sesuai request api ungu/pink)
+                    let powerColor = this.isPlayer1 ? '#00f3ff' : '#ff00ff'; 
 
                     ctx.shadowBlur = 40; 
                     ctx.shadowColor = powerColor;
@@ -615,11 +616,13 @@
                     
                     ctx.fillRect(0, beamY - beamHeight / 2, 1200, beamHeight); 
                     
+                    // Core putih terang di tengah laser
                     ctx.fillStyle = 'white';
                     ctx.shadowBlur = 20;
                     ctx.shadowColor = 'white';
                     ctx.fillRect(0, beamY - beamHeight / 4, 1200, beamHeight / 2);
                     
+                    // Efek statik di dalam sinar
                     ctx.fillStyle = Math.random() > 0.5 ? 'white' : powerColor;
                     ctx.fillRect(Math.random() * 600, beamY - 5, Math.random() * 300, 10);
                 }
@@ -638,7 +641,7 @@
 
                 this.position.x += this.velocity.x;
 
-                // --- LOGIKA SINKRONISASI LASER POWER (FREEZE FRAME 13) ---
+                // Laser menembak saat mencapai frame terakhir
                 if (this.state === 'power' && !this.powerLaserFired && this.currentFrame === this.currentSprite.frames - 1) {
                     this.powerLaserFired = true; 
 
@@ -651,13 +654,11 @@
                     let dir = this.facingRight ? 1 : -1;
                     let startX = this.position.x + this.width / 2;
                     
-                    let powerParticleColor = Math.random() > 0.5 ? '#00f3ff' : 'white';
+                    // Partikel P1 (Biru/Putih), Partikel P2 (Pink/Putih)
+                    let powerParticleColor = this.isPlayer1 ? (Math.random() > 0.5 ? '#00f3ff' : 'white') : (Math.random() > 0.5 ? '#ff00ff' : 'white');
                     particles.spawnPower(startX, this.position.y + 60, powerParticleColor, dir); 
                     
                     this.stateTimer = 800; 
-                    
-                    // Efek shaking monitor saat power telah dihapus sepenuhnya
-                    canvas.style.transform = 'translate(0,0)';
                 }
 
                 if (this.stateTimer > 0) {
@@ -701,10 +702,9 @@
 
             powerMove() {
                 if (['punch', 'kick', 'power', 'hit'].includes(this.state)) return;
-                this.switchState('power'); 
                 
-                // Menunggu frame freeze tercapai (diatur oleh logika update)
-                this.stateTimer = 5000; 
+                this.switchState('power'); 
+                this.stateTimer = 5000; // Akan di-override saat mencapai frame terakhir
             }
 
             takeHit(damage) {
@@ -751,16 +751,18 @@
             jump: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_jump.png', frames: 9 },
             punch: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_Punch.png', frames: 8 },
             kick: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_kick.png', frames: 8 },
-            power: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_power.png', frames: 13 }
+            power: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_power.png', frames: 13 },
+            win: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/B_winner.png', frames: 7 } 
         };
 
         const p2SpritesConfig = {
-            idle: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png', frames: 17 },
-            walk: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/walk.png', frames: 7 },
-            jump: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/jumpy.png', frames: 6 },
-            punch: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/punch.png', frames: 13 },
-            kick: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/kick.png', frames: 17 },
-            power: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/idle.png', frames: 17 }
+            idle: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_idle.png', frames: 9 },
+            walk: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C-walk.png', frames: 9 },
+            jump: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_jump.png', frames: 2 },
+            punch: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_punch.png', frames: 9 },
+            kick: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_kick.png', frames: 9 },
+            power: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_power.png', frames: 11 }, 
+            win: { src: 'https://raw.githubusercontent.com/fauzanbunz/Blokyz/main/C_winner.png', frames: 9 } 
         };
 
         let player1; let player2;
@@ -774,7 +776,7 @@
             player2 = new Fighter({
                 position: { x: canvas.width - 330, y: 0 }, velocity: { x: 0, y: 0 },
                 color: 'var(--neon-pink)', name: 'P2', isPlayer1: false,
-                spriteConfig: p2SpritesConfig, spriteSize: 64
+                spriteConfig: p2SpritesConfig, spriteSize: 90
             });
 
             timer = GAME_DURATION; ui.timer.innerText = timer;
@@ -783,6 +785,13 @@
                 p.updateHealthBar(); p.updateSpiritBar();
             });
             particles.particles = [];
+            
+            // RESET ZOOM KAMERA SETIAP RESTART MATCH
+            [canvas, particleCanvas].forEach(c => {
+                c.style.transition = 'none';
+                c.style.transform = 'scale(1)';
+                c.style.transformOrigin = 'center center';
+            });
         }
 
         function rectangularCollision({ rectangle1, rectangle2 }) {
@@ -795,7 +804,8 @@
         }
 
         function animate(timestamp) {
-            if (gameState !== 'playing') return;
+            // Animasi TETAP BERJALAN saat 'over' (Game Over) agar bisa render Zoom & Pose Kemenangan
+            if (gameState === 'start' || gameState === 'select') return;
 
             const deltaTime = timestamp - lastTime;
             lastTime = timestamp;
@@ -804,13 +814,12 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Lantai Game (Grid Biru Neon)
+            // Lantai Game
             ctx.strokeStyle = 'rgba(0, 243, 255, 0.2)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             const floorY = canvas.height - FLOOR_OFFSET;
             ctx.moveTo(0, floorY); ctx.lineTo(canvas.width, floorY); ctx.stroke();
-            
             for(let i=-5; i<15; i++) {
                 ctx.beginPath();
                 ctx.moveTo(canvas.width/2, floorY - 50); ctx.lineTo(i * 150, canvas.height); ctx.stroke();
@@ -818,7 +827,7 @@
 
             // Logic Player 1
             player1.velocity.x = 0; const floorP1 = canvas.height - FLOOR_OFFSET - player1.height;
-            if (!['hit', 'power'].includes(player1.state) && !player1.isDead) {
+            if (gameState === 'playing' && !['hit', 'power', 'win'].includes(player1.state) && !player1.isDead) {
                 let isMovingP1 = false;
                 if (keys.a.pressed && player1.position.x > 0) { player1.velocity.x = -5; isMovingP1 = true; } 
                 else if (keys.d.pressed && player1.position.x < canvas.width - player1.width) { player1.velocity.x = 5; isMovingP1 = true; }
@@ -829,7 +838,7 @@
                     if (keys.f.pressed) player1.punch(); else if (keys.g.pressed) player1.kick(); else if (keys.h.pressed) player1.powerMove();
                 }
 
-                if (!['punch', 'kick', 'power', 'hit'].includes(player1.state)) {
+                if (!['punch', 'kick', 'power', 'hit', 'win'].includes(player1.state)) {
                     if (player1.position.y < floorP1) player1.switchState('jump');
                     else if (isMovingP1) player1.switchState('walk'); else player1.switchState('idle');
                 }
@@ -837,7 +846,7 @@
 
             // Logic Player 2
             player2.velocity.x = 0; const floorP2 = canvas.height - FLOOR_OFFSET - player2.height;
-            if (!['hit', 'power'].includes(player2.state) && !player2.isDead) {
+            if (gameState === 'playing' && !['hit', 'power', 'win'].includes(player2.state) && !player2.isDead) {
                 let isMovingP2 = false;
                 if (keys.ArrowLeft.pressed && player2.position.x > 0) { player2.velocity.x = -5; isMovingP2 = true; } 
                 else if (keys.ArrowRight.pressed && player2.position.x < canvas.width - player2.width) { player2.velocity.x = 5; isMovingP2 = true; }
@@ -848,7 +857,7 @@
                     if (keys.k.pressed) player2.punch(); else if (keys.l.pressed) player2.kick(); else if (keys[';'].pressed) player2.powerMove();
                 }
 
-                if (!['punch', 'kick', 'power', 'hit'].includes(player2.state)) {
+                if (!['punch', 'kick', 'power', 'hit', 'win'].includes(player2.state)) {
                     if (player2.position.y < floorP2) player2.switchState('jump');
                     else if (isMovingP2) player2.switchState('walk'); else player2.switchState('idle');
                 }
@@ -858,19 +867,21 @@
             player1.draw(); player2.draw();
             particles.updateAndDraw(pCtx);
 
-            // Tabrakan (Hit Detection)
-            if (player1.attackBox.active && rectangularCollision({ rectangle1: player1.attackBox, rectangle2: player2 }) && player2.state !== 'hit' && !player2.isDead) {
-                if (player1.state !== 'power') player1.attackBox.active = false; 
-                player2.takeHit(player1.attackBox.damage); 
-                player1.addSpirit(player1.attackBox.spiritGain);
-            }
-            if (player2.attackBox.active && rectangularCollision({ rectangle1: player2.attackBox, rectangle2: player1 }) && player1.state !== 'hit' && !player1.isDead) {
-                if (player2.state !== 'power') player2.attackBox.active = false; 
-                player1.takeHit(player2.attackBox.damage); 
-                player2.addSpirit(player2.attackBox.spiritGain);
-            }
+            // Tabrakan & Hit Detection
+            if (gameState === 'playing') {
+                if (player1.attackBox.active && rectangularCollision({ rectangle1: player1.attackBox, rectangle2: player2 }) && player2.state !== 'hit' && !player2.isDead) {
+                    if (player1.state !== 'power') player1.attackBox.active = false; 
+                    player2.takeHit(player1.attackBox.damage); 
+                    player1.addSpirit(player1.attackBox.spiritGain);
+                }
+                if (player2.attackBox.active && rectangularCollision({ rectangle1: player2.attackBox, rectangle2: player1 }) && player1.state !== 'hit' && !player1.isDead) {
+                    if (player2.state !== 'power') player2.attackBox.active = false; 
+                    player1.takeHit(player2.attackBox.damage); 
+                    player2.addSpirit(player2.attackBox.spiritGain);
+                }
 
-            if (player1.health <= 0 || player2.health <= 0) determineWinner({ player1, player2, timerId: timerInterval });
+                if (player1.health <= 0 || player2.health <= 0) determineWinner({ player1, player2, timerId: timerInterval });
+            }
         }
 
         function decreaseTimer() {
@@ -880,15 +891,41 @@
 
         function determineWinner({ player1, player2, timerId }) {
             clearInterval(timerId); gameState = 'over';
-            screens.over.classList.remove('hidden');
             
+            let winner = null;
             if (player1.health === player2.health) {
                 ui.resultText.innerText = 'TIE GAME'; ui.resultText.setAttribute('data-text', 'TIE GAME'); ui.resultText.style.color = 'white';
-            } else if (player1.health > player2.health) {
+            } else if (player1.health > player2.health || player2.health <= 0) {
+                winner = player1;
+                player1.switchState('win');
+                player2.switchState('hit'); player2.isDead = true;
+                
                 ui.resultText.innerText = 'P1 BLOK WINS'; ui.resultText.setAttribute('data-text', 'P1 BLOK WINS'); ui.resultText.style.color = 'var(--neon-blue)';
-            } else if (player2.health > player1.health) {
+            } else if (player2.health > player1.health || player1.health <= 0) {
+                winner = player2;
+                player2.switchState('win');
+                player1.switchState('hit'); player1.isDead = true;
+                
                 ui.resultText.innerText = 'P2 CYBR WINS'; ui.resultText.setAttribute('data-text', 'P2 CYBR WINS'); ui.resultText.style.color = 'var(--neon-pink)';
             }
+
+            // KAMERA ZOOM-IN EFEK EKSKLUSIF KE PEMENANG
+            if (winner) {
+                let winCenterX = winner.position.x + winner.width / 2;
+                let winCenterY = winner.position.y + winner.height / 2;
+                let originX = (winCenterX / canvas.width) * 100;
+                let originY = (winCenterY / canvas.height) * 100;
+                
+                [canvas, particleCanvas].forEach(c => {
+                    c.style.transition = 'transform 2s cubic-bezier(0.25, 1, 0.5, 1)';
+                    c.style.transformOrigin = `${originX}% ${originY}%`;
+                    c.style.transform = 'scale(2.5)';
+                });
+            }
+
+            setTimeout(() => {
+                screens.over.classList.remove('hidden');
+            }, 2000);
         }
 
         function goToCharSelect() {
